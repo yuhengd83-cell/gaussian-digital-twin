@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>3DGS Digital Twin Viewer v5.1</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#fff;font-family:"Microsoft YaHei",Inter,system-ui,sans-serif}
+button,input{font:inherit}
+#viewer{display:block;width:100vw;height:100vh;outline:none}
+.glass{background:rgba(13,17,24,.72);border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 14px 42px rgba(0,0,0,.28)}
+#brand{position:fixed;z-index:20;left:18px;top:18px;padding:12px 14px;border-radius:12px;pointer-events:none}
+#brandTitle{font-size:15px;font-weight:700;letter-spacing:.2px}
+#brandSub{font-size:11px;color:#aeb8c6;margin-top:3px}
+#toolbar{position:fixed;z-index:25;right:18px;top:18px;display:flex;gap:7px;padding:7px;border-radius:12px}
+.toolbtn{min-width:70px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#f5f7fb;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px}
+.toolbtn:hover{background:rgba(255,255,255,.13)}
+.toolbtn.active{background:rgba(89,146,255,.23);border-color:rgba(111,165,255,.55)}
+#settings{position:fixed;z-index:24;right:18px;top:78px;width:370px;max-width:calc(100vw - 36px);padding:14px;border-radius:14px;display:none}
+#settings.open{display:block}
+.sectionTitle{font-size:12px;font-weight:700;color:#eaf0f8;margin:2px 0 7px}
+.meta{font-size:11px;line-height:1.55;color:#aab3c0;word-break:break-all}
+#status{margin-top:5px;color:#c8d1dc}
+#error{display:none;margin-top:8px;padding:8px;border-radius:8px;background:rgba(122,25,25,.34);color:#ffb6b6;font-size:11px;white-space:pre-wrap}
+.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;align-items:center}
+.settingsBtn{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;border-radius:8px;padding:7px 9px;cursor:pointer;font-size:11px}
+.settingsBtn:hover{background:rgba(255,255,255,.12)}
+.settingsBtn:disabled{opacity:.42;cursor:default}
+#speedWrap{display:grid;grid-template-columns:auto 1fr 44px;gap:9px;align-items:center;margin-top:9px;font-size:11px;color:#b2bbc8}
+#speed{width:100%}
+#pitchReadout{margin-top:6px;font-size:11px;color:#d9e1ec}
+#progressWrap{display:none;margin-top:9px;height:4px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.07)}
+#progress{width:32%;height:100%;border-radius:999px;background:linear-gradient(90deg,#72a9ff,#8fe7ff);animation:slide 1.1s ease-in-out infinite alternate}
+@keyframes slide{from{transform:translateX(-85%)}to{transform:translateX(270%)}}
+#drop{position:fixed;z-index:30;left:50%;top:50%;width:min(540px,calc(100vw - 40px));transform:translate(-50%,-50%);padding:42px 26px;text-align:center;border:1px dashed rgba(255,255,255,.30);border-radius:18px;background:rgba(12,16,23,.92)}
+#drop.hidden{display:none}
+#drop h2{margin:0 0 9px;font-size:20px}
+#drop p{margin:5px 0;color:#aeb8c5;font-size:12px;line-height:1.6}
+#drop .row{justify-content:center}
+#crosshair{position:fixed;z-index:12;left:50%;top:50%;width:8px;height:8px;margin:-4px;border:1px solid rgba(255,255,255,.86);border-radius:50%;display:none;pointer-events:none}
+#modeHint{position:fixed;z-index:18;left:50%;bottom:20px;transform:translateX(-50%);padding:9px 12px;border-radius:10px;font-size:11px;color:#c0c8d3;white-space:nowrap;opacity:.92}
+#modeHint b{color:#fff}
+#toast{position:fixed;z-index:40;left:50%;top:24px;transform:translateX(-50%) translateY(-14px);padding:9px 13px;border-radius:9px;background:rgba(18,23,31,.92);border:1px solid rgba(255,255,255,.10);font-size:12px;color:#f2f5f8;opacity:0;pointer-events:none;transition:.2s}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:760px){
+  #brand{left:10px;top:10px}
+  #toolbar{right:10px;top:10px}
+  #settings{right:10px;top:68px;width:calc(100vw - 20px)}
+  .toolbtn{min-width:0;padding:8px}
+  #brandSub{display:none}
+  #modeHint{bottom:10px;max-width:calc(100vw - 20px);white-space:normal;text-align:center}
+}
+</style>
+
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@sparkjsdev/spark":"https://sparkjs.dev/releases/spark/2.3.1/spark.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="viewer" tabindex="0"></canvas>
+<div id="crosshair"></div>
+<div id="toast"></div>
+
+<div id="brand" class="glass">
+  <div id="brandTitle">Metric Gaussian Digital Twin</div>
+  <div id="brandSub">Interactive 3D Gaussian Splat Viewer</div>
+</div>
+
+<div id="toolbar" class="glass">
+  <button id="homeTopBtn" class="toolbtn">主页</button>
+  <button id="orbitBtn" class="toolbtn active">轨道</button>
+  <button id="fpsBtn" class="toolbtn">漫游</button>
+  <button id="fullBtn" class="toolbtn">全屏</button>
+  <button id="settingsBtn" class="toolbtn">设置</button>
+</div>
+
+<div id="settings" class="glass">
+  <div class="sectionTitle">查看器状态</div>
+  <div id="status" class="meta">正在初始化...</div>
+  <div id="stats" class="meta">FPS: --</div>
+  <div id="pitchReadout">Pitch: 0.0° / ±45°</div>
+  <div id="error"></div>
+  <div id="progressWrap"><div id="progress"></div></div>
+
+  <div class="sectionTitle" style="margin-top:13px">漫游速度</div>
+  <div id="speedWrap">
+    <span>速度</span>
+    <input id="speed" type="range" min="0.05" max="2.0" value="0.30" step="0.05">
+    <span id="speedValue">0.30</span>
+  </div>
+
+  <div class="sectionTitle" style="margin-top:13px">模型与视角</div>
+  <div class="row">
+    <button id="openBtn" class="settingsBtn">选择模型</button>
+    <button id="autoBtn" class="settingsBtn">自动适配</button>
+    <button id="saveHomeBtn" class="settingsBtn">设当前为首页</button>
+    <button id="resetBtn" class="settingsBtn">回首页</button>
+  </div>
+  <div class="row">
+    <button id="exportHomeBtn" class="settingsBtn">导出首页配置</button>
+    <button id="clearHomeBtn" class="settingsBtn">清除浏览器视角</button>
+    <button id="exportSpzBtn" class="settingsBtn" disabled>导出 SPZ</button>
+    <button id="dropBtn" class="settingsBtn">拖放模型</button>
+  </div>
+
+  <div class="meta" style="margin-top:12px">
+    固定坐标：<b>-Z Up</b> · 第一人称 Pitch ±45° · 轨道 Pitch ±55° · Roll 0°<br>
+    快捷键：H 首页 · 1 轨道 · 2 漫游 · F 全屏
+  </div>
+
+  <input id="fileInput" type="file" accept=".ply,.spz,.splat,.ksplat,.sog,.zip" hidden>
+</div>
+
+<div id="drop" class="glass">
+  <h2>加载 Gaussian Splat</h2>
+  <p>支持 PLY / SPZ / SPLAT / KSPLAT / SOG</p>
+  <p>默认优先加载 models/splat.spz</p>
+  <div class="row">
+    <button id="dropOpenBtn" class="settingsBtn">选择本地模型</button>
+  </div>
+</div>
+
+<div id="modeHint" class="glass">
+  <span id="modeHintText"><b>轨道模式</b> · 左键旋转 · 右键平移 · 滚轮缩放</span>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { SparkRenderer, SplatMesh, transcodeSpz } from "@sparkjsdev/spark";
+
+const $=id=>document.getElementById(id);
+const canvas=$("viewer"),statusEl=$("status"),statsEl=$("stats"),errorEl=$("error");
+const dropEl=$("drop"),progressWrap=$("progressWrap"),crosshair=$("crosshair"),settingsEl=$("settings");
+
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:"high-performance"});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight,false);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0f1115);
+
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.01,10000);
+camera.position.set(0,0,2);
+
+// 你的 office2 已经实测：-Z 才是真正的“向上”
+const SCENE_UP=new THREE.Vector3(0,0,-1);
+camera.up.copy(SCENE_UP);
+
+const spark=new SparkRenderer({renderer});
+scene.add(spark);
+
+const orbit=new OrbitControls(camera,renderer.domElement);
+orbit.enableDamping=true;
+orbit.dampingFactor=.08;
+orbit.screenSpacePanning=true;
+
+// 轨道模式：限制为地平线上下 ±75°，禁止翻转。
+// OrbitControls 的 polar angle: 0=向上，90°=水平，180°=向下。
+orbit.minPolarAngle=THREE.MathUtils.degToRad(35);
+orbit.maxPolarAngle=THREE.MathUtils.degToRad(145);
+
+let mode="orbit";
+let currentModel=null,currentId="",currentBytes=null,currentFile=null,currentUrl=null;
+let sceneRadius=2,autoView=null,loading=false,permanentConfig=null;
+
+function setStatus(t){statusEl.textContent=t}
+function setLoading(v,t=""){loading=v;progressWrap.style.display=v?"block":"none";if(t)setStatus(t)}
+function clearError(){errorEl.style.display="none";errorEl.textContent=""}
+function showError(e){console.error(e);errorEl.style.display="block";errorEl.textContent="错误："+(e?.message||String(e))}
+let toastTimer=null;
+function toast(msg){
+  const el=$("toast");
+  el.textContent=msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove("show"),1600);
+}
+function updateModeHint(){
+  $("modeHintText").innerHTML = mode==="fps"
+    ? "<b>漫游模式</b> · 点击画面锁定鼠标 · WASD 移动 · Space/Shift 升降 · Esc 释放鼠标"
+    : "<b>轨道模式</b> · 左键旋转 · 右键平移 · 滚轮缩放";
+}
+function homeKey(){return "3dgs-viewer-home-v3:"+currentId}
+
+function getLookTarget(distance=Math.max(1,sceneRadius*.4)){
+  const dir=new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  return camera.position.clone().addScaledVector(dir,distance);
+}
+
+function serializeView(){
+  const target=mode==="orbit" ? orbit.target.clone() : getLookTarget();
+  return {
+    p:camera.position.toArray(),
+    t:target.toArray()
+  };
+}
+
+// 不再直接恢复 quaternion，避免把旧配置里的 roll 一起带回来。
+// 只用 position + target，并用固定 -Z up 重建相机姿态。
+function applyView(v){
+  if(!v||!Array.isArray(v.p)||!Array.isArray(v.t))return false;
+  camera.position.fromArray(v.p);
+  camera.up.copy(SCENE_UP);
+  orbit.target.fromArray(v.t);
+  camera.lookAt(orbit.target);
+  orbit.update();
+  return true;
+}
+
+function saveHome(){
+  if(!currentId){setStatus("请先加载模型。");return}
+  localStorage.setItem(homeKey(),JSON.stringify(serializeView()));
+  setStatus("已保存当前首页视角。Roll 已自动锁正。");toast("首页视角已保存");
+}
+
+function loadLocalHome(){
+  try{
+    const raw=localStorage.getItem(homeKey());
+    return raw?JSON.parse(raw):null;
+  }catch(_){return null}
+}
+
+function clearHome(){
+  if(currentId)localStorage.removeItem(homeKey());
+  setStatus("已清除当前浏览器保存的首页视角。");toast("浏览器视角已清除");
+}
+
+async function loadPermanentConfig(){
+  try{
+    const r=await fetch("viewer_config.json",{cache:"no-store"});
+    if(!r.ok)return null;
+    permanentConfig=await r.json();
+    if(permanentConfig?.projectTitle) $("brandTitle").textContent=permanentConfig.projectTitle;
+    if(permanentConfig?.projectSubtitle) $("brandSub").textContent=permanentConfig.projectSubtitle;
+    return permanentConfig;
+  }catch(_){return null}
+}
+
+function downloadJson(obj,name){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+  const u=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=u;a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(u);
+}
+
+function exportPermanentHome(){
+  if(!currentModel){setStatus("请先加载模型。");return}
+  downloadJson({
+    version:3,
+    modelId:currentId,
+    homeView:serializeView(),
+    sceneUp:[0,0,-1],
+    upAxis:"-Z",
+    firstPersonPitchLimitDeg:45,
+    orbitPitchLimitDeg:55,
+    rollLocked:true,
+    projectTitle:$("brandTitle").textContent,
+    projectSubtitle:$("brandSub").textContent
+  },"viewer_config.json");
+  setStatus("已导出新的 viewer_config.json（固定 -Z-up、±65°/±75°、Roll 锁死）。");
+}
+
+function percentile(a,p){
+  if(!a.length)return 0;
+  return a[Math.max(0,Math.min(a.length-1,Math.floor((a.length-1)*p)))];
+}
+
+async function computeRobustBounds(mesh){
+  await mesh.initialized;
+  mesh.updateMatrixWorld(true);
+
+  const xs=[],ys=[],zs=[];
+  const total=mesh.numSplats||1;
+  const stride=Math.max(1,Math.floor(total/20000));
+  const v=new THREE.Vector3();
+
+  mesh.forEachSplat((i,center)=>{
+    if(i%stride!==0)return;
+    v.copy(center).applyMatrix4(mesh.matrixWorld);
+    if(Number.isFinite(v.x)&&Number.isFinite(v.y)&&Number.isFinite(v.z)){
+      xs.push(v.x);ys.push(v.y);zs.push(v.z);
+    }
+  });
+
+  xs.sort((a,b)=>a-b);ys.sort((a,b)=>a-b);zs.sort((a,b)=>a-b);
+
+  return new THREE.Box3(
+    new THREE.Vector3(percentile(xs,.02),percentile(ys,.02),percentile(zs,.02)),
+    new THREE.Vector3(percentile(xs,.98),percentile(ys,.98),percentile(zs,.98))
+  );
+}
+
+function frameBounds(box){
+  const center=box.getCenter(new THREE.Vector3());
+  const size=box.getSize(new THREE.Vector3());
+  const maxDim=Math.max(size.x,size.y,size.z,.1);
+  sceneRadius=maxDim*.5;
+
+  const vFov=THREE.MathUtils.degToRad(camera.fov);
+  const distance=(maxDim/(2*Math.tan(vFov/2)))*1.05;
+
+  // 用与 -Z-up 不平行的方向自动取景
+  const dir=new THREE.Vector3(.75,.65,.18).normalize();
+
+  camera.position.copy(center).addScaledVector(dir,distance);
+  camera.up.copy(SCENE_UP);
+  orbit.target.copy(center);
+  camera.lookAt(center);
+  orbit.update();
+
+  autoView=serializeView();
+}
+
+async function autoFrame(){
+  if(!currentModel)return;
+  try{
+    const box=await computeRobustBounds(currentModel);
+    frameBounds(box);
+    setStatus("已自动适配；场景固定 -Z-up。");
+  }catch(e){
+    showError(e);
+    setStatus("自动适配失败。");
+  }
+}
+
+function removeModel(){
+  if(currentModel){
+    scene.remove(currentModel);
+    currentModel.dispose?.();
+    currentModel=null;
+  }
+}
+
+async function addModel(init,id){
+  removeModel();
+  clearError();
+  setLoading(true,"正在解析 3DGS 模型...");
+  currentId=id;
+
+  currentModel=new SplatMesh(init);
+  currentModel.quaternion.set(1,0,0,0);
+  scene.add(currentModel);
+
+  try{
+    await currentModel.initialized;
+    $("exportSpzBtn").disabled=false;
+    dropEl.classList.add("hidden");
+
+    const cfg=permanentConfig||await loadPermanentConfig();
+
+    if(cfg?.homeView&&applyView(cfg.homeView)){
+      setLoading(false);
+      setStatus("已加载模型，并应用永久首页视角。场景固定 -Z-up。");toast("模型已加载");
+      return;
+    }
+
+    const local=loadLocalHome();
+    if(local&&applyView(local)){
+      setLoading(false);
+      setStatus("已恢复浏览器保存的首页视角。场景固定 -Z-up。");
+      return;
+    }
+
+    const box=await computeRobustBounds(currentModel);
+    frameBounds(box);
+    setLoading(false);
+    setStatus("已自动适配。请调整到满意视角后保存首页。");
+  }catch(e){
+    setLoading(false);
+    showError(e);
+    setStatus("模型加载失败。");
+  }
+}
+
+async function loadLocalFile(file){
+  if(!file||loading)return;
+
+  currentFile=file;
+  currentUrl=null;
+
+  try{
+    setLoading(true,`正在读取 ${file.name} ...`);
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    currentBytes=bytes;
+    await addModel({fileBytes:bytes.slice(),fileName:file.name},"local:"+file.name);
+  }catch(e){
+    setLoading(false);
+    showError(e);
+  }
+}
+
+async function urlExists(url){
+  try{
+    let r=await fetch(url,{method:"HEAD",cache:"no-store"});
+    if(r.ok)return true;
+
+    r=await fetch(url,{
+      headers:{"Range":"bytes=0-0"},
+      cache:"no-store"
+    });
+
+    return r.ok||r.status===206;
+  }catch(_){
+    return false;
+  }
+}
+
+async function loadUrl(url){
+  currentFile=null;
+  currentUrl=url;
+  currentBytes=null;
+  await addModel({url},"url:"+url);
+}
+
+async function tryAutoLoad(){
+  if(location.protocol==="file:"){
+    setStatus("当前是 file:// 模式，请使用启动脚本。");
+    return;
+  }
+
+  await loadPermanentConfig();
+
+  const custom=new URLSearchParams(location.search).get("url");
+  const candidates=custom
+    ? [custom]
+    : ["models/splat.spz","models/office2.spz","models/splat.ply"];
+
+  for(const u of candidates){
+    setStatus("正在检查："+u);
+    if(await urlExists(u)){
+      await loadUrl(u);
+      return;
+    }
+  }
+
+  setStatus("未发现默认模型，请选择或拖入模型。");
+}
+
+function resetHome(){
+  if(permanentConfig?.homeView&&applyView(permanentConfig.homeView)){
+    setStatus("已回到永久首页视角。");
+    return;
+  }
+
+  const local=loadLocalHome();
+  if(local&&applyView(local)){
+    setStatus("已回到浏览器保存的首页视角。");
+    return;
+  }
+
+  if(autoView){
+    applyView(autoView);
+    setStatus("已回到自动适配视角。");
+    return;
+  }
+
+  autoFrame();
+}
+
+// ========== 第一人称控制：-Z-up / Pitch ±65° / Roll 0 ==========
+const MAX_FP_PITCH=THREE.MathUtils.degToRad(45);
+
+let fpsYaw=0;
+let fpsPitch=0;
+
+const refForward=new THREE.Vector3();
+const refRight=new THREE.Vector3();
+const groundForward=new THREE.Vector3();
+const groundRight=new THREE.Vector3();
+const fpsForward=new THREE.Vector3();
+const tmp=new THREE.Vector3();
+
+const mouseSensitivity=.002;
+
+function buildGroundBasis(){
+  // -Z-up，因此 XY 平面是地面。
+  // 基准“前方”取 +Y，右侧由 forward × up 得到。
+  refForward.set(0,1,0);
+  refRight.crossVectors(refForward,SCENE_UP).normalize();
+}
+
+function initFpsFromCamera(){
+  buildGroundBasis();
+
+  camera.getWorldDirection(fpsForward).normalize();
+
+  const vertical=THREE.MathUtils.clamp(fpsForward.dot(SCENE_UP),-1,1);
+  fpsPitch=Math.asin(vertical);
+  fpsPitch=THREE.MathUtils.clamp(fpsPitch,-MAX_FP_PITCH,MAX_FP_PITCH);
+
+  groundForward.copy(fpsForward).addScaledVector(SCENE_UP,-vertical);
+
+  if(groundForward.lengthSq()<1e-8){
+    groundForward.copy(refForward);
+  }
+
+  groundForward.normalize();
+
+  fpsYaw=Math.atan2(
+    groundForward.dot(refRight),
+    groundForward.dot(refForward)
+  );
+
+  updateFpsRotation();
+}
+
+function updateFpsRotation(){
+  groundForward.copy(refForward)
+    .multiplyScalar(Math.cos(fpsYaw))
+    .addScaledVector(refRight,Math.sin(fpsYaw))
+    .normalize();
+
+  fpsForward.copy(groundForward)
+    .multiplyScalar(Math.cos(fpsPitch))
+    .addScaledVector(SCENE_UP,Math.sin(fpsPitch))
+    .normalize();
+
+  // 每一帧都重新使用 scene up + lookAt 建立正交相机，
+  // 因此不会积累 roll。
+  camera.up.copy(SCENE_UP);
+  camera.lookAt(tmp.copy(camera.position).add(fpsForward));
+}
+
+function enterFps(){
+  mode="fps";
+  orbit.enabled=false;
+  $("orbitBtn").classList.remove("active");
+  $("fpsBtn").classList.add("active");
+  crosshair.style.display="block";
+
+  initFpsFromCamera();
+
+  setStatus("第一人称：鼠标向右=视角向右；W/S 前后，A/D 左右，Space/Shift 上下；Pitch 硬限制 ±45°，Roll 锁死。");
+  updateModeHint();
+  toast("已切换到漫游模式");
+}
+
+function enterOrbit(){
+  if(document.pointerLockElement===canvas){
+    document.exitPointerLock();
+  }
+
+  mode="orbit";
+  orbit.enabled=true;
+
+  $("fpsBtn").classList.remove("active");
+  $("orbitBtn").classList.add("active");
+  crosshair.style.display="none";
+
+  camera.up.copy(SCENE_UP);
+
+  camera.getWorldDirection(tmp);
+  orbit.target.copy(camera.position).addScaledVector(
+    tmp,
+    Math.max(sceneRadius*.35,.5)
+  );
+
+  orbit.update();
+
+  setStatus("轨道模式：水平 360°；上下硬限制 ±55°；禁止翻转。");
+  updateModeHint();
+  toast("已切换到轨道模式");
+}
+
+canvas.addEventListener("click",()=>{
+  if(mode==="fps"&&document.pointerLockElement!==canvas){
+    canvas.requestPointerLock();
+  }
+});
+
+document.addEventListener("mousemove",e=>{
+  if(mode!=="fps"||document.pointerLockElement!==canvas)return;
+
+  fpsYaw+=e.movementX*mouseSensitivity;
+  fpsPitch-=e.movementY*mouseSensitivity;
+
+  const unclampedPitch = fpsPitch;
+
+  fpsPitch=THREE.MathUtils.clamp(
+    fpsPitch,
+    -MAX_FP_PITCH,
+    MAX_FP_PITCH
+  );
+
+  updateFpsRotation();
+
+  if (Math.abs(unclampedPitch) > MAX_FP_PITCH) {
+    setStatus(
+      `已到第一人称俯仰极限：${fpsPitch > 0 ? "+" : "-"}45°。` +
+      " 左右仍可 360° 转动。"
+    );
+  }
+});
+
+const keys=new Set();
+
+addEventListener("keydown",e=>{
+  const tag=(e.target?.tagName||"").toLowerCase();
+  const editing=tag==="input"||tag==="textarea"||tag==="select";
+
+  if(!editing && document.pointerLockElement!==canvas){
+    if(e.code==="KeyH"){ resetHome(); toast("已回到首页视角"); return; }
+    if(e.code==="Digit1"){ enterOrbit(); return; }
+    if(e.code==="Digit2"){ enterFps(); return; }
+    if(e.code==="KeyF"){ toggleFullscreen(); return; }
+  }
+
+  keys.add(e.code);
+
+  if([
+    "Space",
+    "KeyW","KeyA","KeyS","KeyD",
+    "ShiftLeft","ShiftRight"
+  ].includes(e.code)){
+    e.preventDefault();
+  }
+});
+
+addEventListener("keyup",e=>keys.delete(e.code));
+addEventListener("blur",()=>keys.clear());
+
+const clock=new THREE.Clock();
+
+function updateFpsMove(dt){
+  if(mode!=="fps"||document.pointerLockElement!==canvas)return;
+
+  const a=Number($("speed").value)*dt;
+
+  groundForward.copy(refForward)
+    .multiplyScalar(Math.cos(fpsYaw))
+    .addScaledVector(refRight,Math.sin(fpsYaw))
+    .normalize();
+
+  groundRight.crossVectors(groundForward,SCENE_UP).normalize();
+
+  if(keys.has("KeyW"))camera.position.addScaledVector(groundForward,a);
+  if(keys.has("KeyS"))camera.position.addScaledVector(groundForward,-a);
+
+  if(keys.has("KeyA"))camera.position.addScaledVector(groundRight,-a);
+  if(keys.has("KeyD"))camera.position.addScaledVector(groundRight,a);
+
+  // -Z 就是现实“向上”
+  if(keys.has("Space"))camera.position.addScaledVector(SCENE_UP,a);
+
+  if(keys.has("ShiftLeft")||keys.has("ShiftRight")){
+    camera.position.addScaledVector(SCENE_UP,-a);
+  }
+}
+
+// ========== SPZ ==========
+async function ensureBytes(){
+  if(currentBytes)return currentBytes;
+
+  if(currentFile){
+    currentBytes=new Uint8Array(await currentFile.arrayBuffer());
+    return currentBytes;
+  }
+
+  if(currentUrl){
+    setLoading(true,"正在读取当前模型...");
+
+    const r=await fetch(currentUrl);
+
+    if(!r.ok){
+      throw new Error("下载模型失败："+r.status);
+    }
+
+    currentBytes=new Uint8Array(await r.arrayBuffer());
+    return currentBytes;
+  }
+
+  throw new Error("没有模型。");
+}
+
+async function exportSpz(){
+  try{
+    setLoading(true,"正在转换 SPZ...");
+
+    const bytes=await ensureBytes();
+    const name=currentFile?.name||
+      (currentUrl?.split("/").pop().split("?")[0])||
+      "model.ply";
+
+    const out=await transcodeSpz({
+      inputs:[{fileBytes:bytes,pathOrUrl:name}],
+      maxSh:3,
+      fractionalBits:12,
+      opacityThreshold:0
+    });
+
+    const blob=new Blob(
+      [out.fileBytes],
+      {type:"application/octet-stream"}
+    );
+
+    const u=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+
+    a.href=u;
+    a.download=(name.replace(/\.[^.]+$/,"")||"model")+".spz";
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(u);
+
+    setLoading(false,"SPZ 导出完成。");
+  }catch(e){
+    setLoading(false);
+    showError(e);
+    setStatus("SPZ 导出失败。");
+  }
+}
+
+// ========== UI ==========
+const fileInput=$("fileInput");
+
+$("homeTopBtn").onclick=()=>{resetHome();toast("已回到首页视角");};
+$("settingsBtn").onclick=()=>{
+  settingsEl.classList.toggle("open");
+  $("settingsBtn").classList.toggle("active",settingsEl.classList.contains("open"));
+};
+$("openBtn").onclick=()=>fileInput.click();
+$("dropOpenBtn").onclick=()=>fileInput.click();
+
+fileInput.onchange=e=>{
+  const f=e.target.files?.[0];
+
+  if(f){
+    loadLocalFile(f);
+  }
+
+  fileInput.value="";
+};
+
+$("autoBtn").onclick=autoFrame;
+$("saveHomeBtn").onclick=saveHome;
+$("resetBtn").onclick=resetHome;
+$("exportHomeBtn").onclick=exportPermanentHome;
+$("clearHomeBtn").onclick=clearHome;
+
+$("orbitBtn").onclick=enterOrbit;
+$("fpsBtn").onclick=enterFps;
+
+$("dropBtn").onclick=()=>{
+  dropEl.classList.toggle("hidden");
+};
+
+$("exportSpzBtn").onclick=exportSpz;
+
+$("speed").oninput=()=>{
+  $("speedValue").textContent=
+    Number($("speed").value).toFixed(2);
+};
+
+async function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    await document.documentElement.requestFullscreen();
+  }else{
+    await document.exitFullscreen();
+  }
+}
+$("fullBtn").onclick=toggleFullscreen;
+
+addEventListener("dragover",e=>{
+  e.preventDefault();
+  dropEl.classList.remove("hidden");
+});
+
+addEventListener("drop",e=>{
+  e.preventDefault();
+
+  const f=e.dataTransfer.files?.[0];
+
+  if(f){
+    loadLocalFile(f);
+  }
+});
+
+function resize(){
+  renderer.setSize(
+    innerWidth,
+    innerHeight,
+    false
+  );
+
+  camera.aspect=
+    innerWidth/innerHeight;
+
+  camera.updateProjectionMatrix();
+}
+
+addEventListener("resize",resize);
+
+let frames=0;
+let last=performance.now();
+
+renderer.setAnimationLoop(()=>{
+  const dt=Math.min(
+    clock.getDelta(),
+    .05
+  );
+
+  if(mode==="orbit"){
+    orbit.update();
+  }else{
+    updateFpsMove(dt);
+  }
+
+  renderer.render(
+    scene,
+    camera
+  );
+
+  frames++;
+
+  const now=performance.now();
+
+  if(now-last>500){
+    const fps=Math.round(
+      frames*1000/(now-last)
+    );
+
+    frames=0;
+    last=now;
+
+    statsEl.textContent=
+      `FPS: ${fps}　`+
+      `模式: ${mode==="orbit"?"轨道":"第一人称"}　`+
+      `Up: -Z　`+
+      `相机: ${camera.position.x.toFixed(2)}, `+
+      `${camera.position.y.toFixed(2)}, `+
+      `${camera.position.z.toFixed(2)}`;
+
+    const pitchDeg = mode==="fps"
+      ? THREE.MathUtils.radToDeg(fpsPitch)
+      : 90 - THREE.MathUtils.radToDeg(orbit.getPolarAngle());
+
+    const limitDeg = mode==="fps" ? 45 : 55;
+    $("pitchReadout").textContent =
+      `Pitch: ${pitchDeg.toFixed(1)}° / ±${limitDeg}°`;
+  }
+});
+
+updateModeHint();
+tryAutoLoad();
+</script>
+</body>
+</html>

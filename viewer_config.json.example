@@ -1,0 +1,27 @@
+{
+  "version": 5,
+  "modelId": "url:models/splat.spz",
+  "homeView": {
+    "p": [
+      0,
+      0,
+      2
+    ],
+    "t": [
+      0,
+      0,
+      0
+    ]
+  },
+  "sceneUp": [
+    0,
+    0,
+    -1
+  ],
+  "upAxis": "-Z",
+  "firstPersonPitchLimitDeg": 45,
+  "orbitPitchLimitDeg": 55,
+  "rollLocked": true,
+  "projectTitle": "Metric Gaussian Digital Twin",
+  "projectSubtitle": "Interactive 3D Gaussian Splat Viewer"
+}
