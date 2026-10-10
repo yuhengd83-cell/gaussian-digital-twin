@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>3DGS Digital Twin Viewer v5.1</title>
+<title>AGV Metric Gaussian Digital Twin v5.4</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#fff;font-family:"Microsoft YaHei",Inter,system-ui,sans-serif}
@@ -51,6 +51,330 @@ button,input{font:inherit}
   #brandSub{display:none}
   #modeHint{bottom:10px;max-width:calc(100vw - 20px);white-space:normal;text-align:center}
 }
+
+/* ===== v5.2 汇报展示层 ===== */
+#brandTitle{font-size:16px}
+#brandSub{max-width:380px}
+
+#introOverlay{
+  position:fixed;z-index:60;inset:0;
+  display:flex;align-items:center;justify-content:flex-start;
+  padding:clamp(28px,7vw,96px);
+  background:
+    linear-gradient(90deg,rgba(7,10,15,.84) 0%,rgba(7,10,15,.68) 38%,rgba(7,10,15,.18) 68%,rgba(7,10,15,0) 100%);
+  transition:opacity .28s ease,visibility .28s ease;
+}
+#introOverlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
+#introCard{
+  width:min(590px,calc(100vw - 44px));
+  padding:28px 30px;border-radius:20px;
+  background:rgba(11,15,22,.72);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+#introEyebrow{
+  font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+  color:#aeb9c8;margin-bottom:12px
+}
+#introTitle{
+  margin:0;font-size:clamp(28px,4vw,48px);line-height:1.06;
+  font-weight:760;letter-spacing:-.02em
+}
+#introCn{
+  margin-top:12px;font-size:17px;font-weight:650;color:#e8edf5
+}
+#introDesc{
+  margin-top:14px;max-width:520px;color:#b8c2cf;font-size:13px;line-height:1.8
+}
+#introTags{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.introTag{
+  padding:6px 9px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:#cbd3de;font-size:11px
+}
+#introActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.primaryBtn,.secondaryBtn{
+  border-radius:10px;padding:10px 15px;cursor:pointer;font-size:13px
+}
+.primaryBtn{
+  border:1px solid rgba(126,177,255,.7);
+  background:rgba(81,139,235,.34);color:white
+}
+.primaryBtn:hover{background:rgba(81,139,235,.48)}
+.secondaryBtn{
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);color:#eff3f8
+}
+.secondaryBtn:hover{background:rgba(255,255,255,.11)}
+#introFoot{
+  margin-top:16px;font-size:10px;color:#8994a3;line-height:1.5
+}
+
+#sharePanel{
+  position:fixed;z-index:70;right:18px;top:78px;
+  width:310px;max-width:calc(100vw - 36px);
+  padding:15px;border-radius:14px;display:none
+}
+#sharePanel.open{display:block}
+#shareQr{
+  display:block;width:180px;height:180px;margin:12px auto;
+  border-radius:10px;background:#fff;padding:7px
+}
+#shareUrl{
+  padding:8px 9px;border-radius:8px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+  color:#bfc8d4;font-size:10px;word-break:break-all;line-height:1.5
+}
+.shareActions{display:flex;gap:8px;margin-top:10px}
+.shareActions button{flex:1}
+
+@media(max-width:760px){
+  #introOverlay{
+    align-items:flex-end;padding:18px;
+    background:linear-gradient(180deg,rgba(7,10,15,.18) 0%,rgba(7,10,15,.76) 48%,rgba(7,10,15,.93) 100%)
+  }
+  #introCard{padding:22px 20px}
+  #introTitle{font-size:30px}
+  #sharePanel{right:10px;top:68px;width:calc(100vw - 20px)}
+}
+
+
+/* ===== v5.3 首屏加载进度 + 手机双区触控 ===== */
+#viewer{touch-action:none}
+
+/* 首次公网访问的模型加载层 */
+#loadingOverlay{
+  position:fixed;z-index:90;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(7,10,15,.84);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  transition:opacity .28s ease,visibility .28s ease;
+}
+#loadingOverlay.hidden{
+  opacity:0;visibility:hidden;pointer-events:none
+}
+#loadingCard{
+  width:min(480px,calc(100vw - 38px));
+  padding:24px 24px 22px;border-radius:18px;
+  background:rgba(13,17,24,.92);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 22px 60px rgba(0,0,0,.35)
+}
+#loadingTitle{
+  font-size:17px;font-weight:720;color:#f3f6fa
+}
+#loadingStage{
+  margin-top:7px;font-size:12px;line-height:1.6;color:#b6c0cc
+}
+#loadingPercent{
+  margin-top:18px;font-size:28px;font-weight:730;letter-spacing:-.02em
+}
+#loadingBarTrack{
+  margin-top:10px;width:100%;height:8px;border-radius:999px;
+  background:rgba(255,255,255,.08);overflow:hidden
+}
+#loadingBar{
+  width:0%;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,#6da5ff,#86e4ff);
+  transition:width .12s linear
+}
+#loadingBar.parsing{
+  width:36%!important;
+  animation:loadingSweep 1.05s ease-in-out infinite alternate
+}
+@keyframes loadingSweep{
+  from{transform:translateX(-100%)}
+  to{transform:translateX(280%)}
+}
+#loadingBytes{
+  margin-top:9px;font-size:11px;color:#8f9baa
+}
+#loadingTip{
+  margin-top:16px;padding-top:13px;border-top:1px solid rgba(255,255,255,.08);
+  font-size:10px;line-height:1.55;color:#7f8b99
+}
+
+/* 手机第一人称控制 */
+#mobileControls{
+  display:none;position:fixed;z-index:18;inset:0;
+  pointer-events:none
+}
+#mobileLookZone{
+  position:absolute;right:0;top:0;bottom:0;width:58%;
+  pointer-events:auto;touch-action:none
+}
+#mobileLookHint{
+  position:absolute;right:18px;bottom:22px;
+  font-size:10px;color:rgba(255,255,255,.62);
+  background:rgba(10,14,20,.36);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;padding:6px 9px;pointer-events:none
+}
+#joystickWrap{
+  position:absolute;left:20px;bottom:24px;
+  width:142px;height:142px;pointer-events:auto;touch-action:none
+}
+#joystickBase{
+  position:absolute;left:0;top:0;width:142px;height:142px;border-radius:50%;
+  background:rgba(10,14,20,.36);
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)
+}
+#joystickBase::before,#joystickBase::after{
+  content:"";position:absolute;background:rgba(255,255,255,.10)
+}
+#joystickBase::before{
+  left:50%;top:17px;bottom:17px;width:1px
+}
+#joystickBase::after{
+  top:50%;left:17px;right:17px;height:1px
+}
+#joystickKnob{
+  position:absolute;left:43px;top:43px;width:56px;height:56px;border-radius:50%;
+  background:rgba(238,244,255,.30);
+  border:1px solid rgba(255,255,255,.34);
+  box-shadow:0 8px 24px rgba(0,0,0,.22);
+  transform:translate(0px,0px)
+}
+#verticalBtns{
+  position:absolute;left:176px;bottom:42px;
+  display:flex;flex-direction:column;gap:9px;
+  pointer-events:auto
+}
+.mobileRoundBtn{
+  width:48px;height:48px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(10,14,20,.40);
+  color:#fff;font-size:17px;font-weight:700;
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  touch-action:none
+}
+.mobileRoundBtn.active{background:rgba(88,145,240,.42)}
+
+body.mobile-fps #mobileControls{display:block}
+body.mobile-fps #modeHint{display:none}
+
+@media(max-width:760px){
+  #toolbar{
+    gap:4px;padding:5px;max-width:calc(100vw - 20px);flex-wrap:wrap;justify-content:flex-end
+  }
+  .toolbtn{font-size:11px;padding:7px 8px}
+  #brand{max-width:48vw}
+  #brandTitle{font-size:12px}
+  #joystickWrap{left:16px;bottom:18px;width:126px;height:126px}
+  #joystickBase{width:126px;height:126px}
+  #joystickKnob{left:38px;top:38px;width:50px;height:50px}
+  #verticalBtns{left:153px;bottom:30px}
+  .mobileRoundBtn{width:44px;height:44px}
+  #mobileLookHint{right:12px;bottom:16px}
+}
+
+
+/* ===== v5.4 中国铁建 Logo ===== */
+#brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:9px 13px 9px 9px;
+  min-height:72px;
+}
+#brandLogoBox{
+  flex:0 0 auto;
+  width:68px;
+  height:58px;
+  border-radius:8px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+}
+#brandLogo{
+  width:62px;
+  height:54px;
+  object-fit:contain;
+  display:block;
+}
+#brandText{
+  min-width:0;
+}
+#brandTitle{
+  line-height:1.25;
+}
+#brandSub{
+  line-height:1.45;
+}
+
+/* 开场页中的企业标识，保持低调，不抢项目标题 */
+#introBrand{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  margin-bottom:17px;
+}
+#introBrandLogoBox{
+  width:70px;
+  height:60px;
+  border-radius:9px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+#introBrandLogo{
+  width:64px;
+  height:55px;
+  object-fit:contain;
+  display:block;
+}
+#introBrandName{
+  color:#dce3ec;
+  font-size:12px;
+  line-height:1.55;
+  letter-spacing:.04em;
+}
+#introBrandName b{
+  display:block;
+  color:#fff;
+  font-size:14px;
+  letter-spacing:.06em;
+}
+
+@media(max-width:760px){
+  #brand{
+    min-height:58px;
+    gap:8px;
+    padding:7px 9px 7px 7px;
+    max-width:56vw;
+  }
+  #brandLogoBox{
+    width:48px;
+    height:44px;
+    border-radius:7px;
+  }
+  #brandLogo{
+    width:44px;
+    height:40px;
+  }
+  #brandSub{
+    display:none;
+  }
+  #introBrand{
+    margin-bottom:14px;
+  }
+  #introBrandLogoBox{
+    width:58px;
+    height:50px;
+  }
+  #introBrandLogo{
+    width:53px;
+    height:46px;
+  }
+}
+
 </style>
 
 <script type="importmap">
@@ -67,17 +391,35 @@ button,input{font:inherit}
 <canvas id="viewer" tabindex="0"></canvas>
 <div id="crosshair"></div>
 <div id="toast"></div>
+<div id="loadingOverlay">
+  <div id="loadingCard">
+    <div id="loadingTitle">正在加载 3DGS 场景</div>
+    <div id="loadingStage">正在连接模型文件…</div>
+    <div id="loadingPercent">0%</div>
+    <div id="loadingBarTrack"><div id="loadingBar"></div></div>
+    <div id="loadingBytes">准备下载模型</div>
+    <div id="loadingTip">首次打开需要下载约 22 MB 的 SPZ 模型。请保持页面打开，加载完成后会自动进入场景。</div>
+  </div>
+</div>
+
 
 <div id="brand" class="glass">
-  <div id="brandTitle">Metric Gaussian Digital Twin</div>
-  <div id="brandSub">Interactive 3D Gaussian Splat Viewer</div>
+  <div id="brandLogoBox">
+    <img id="brandLogo" src="assets/crcc_logo.png" alt="中国铁建 CRCC">
+  </div>
+  <div id="brandText">
+    <div id="brandTitle">AGV Metric Gaussian Digital Twin</div>
+    <div id="brandSub">真实场景三维重建与数字孪生展示</div>
+  </div>
 </div>
 
 <div id="toolbar" class="glass">
+  <button id="projectBtn" class="toolbtn">项目</button>
   <button id="homeTopBtn" class="toolbtn">主页</button>
   <button id="orbitBtn" class="toolbtn active">轨道</button>
   <button id="fpsBtn" class="toolbtn">漫游</button>
   <button id="fullBtn" class="toolbtn">全屏</button>
+  <button id="shareBtn" class="toolbtn">分享</button>
   <button id="settingsBtn" class="toolbtn">设置</button>
 </div>
 
@@ -111,11 +453,58 @@ button,input{font:inherit}
   </div>
 
   <div class="meta" style="margin-top:12px">
-    固定坐标：<b>-Z Up</b> · 第一人称 Pitch ±45° · 轨道 Pitch ±55° · Roll 0°<br>
-    快捷键：H 首页 · 1 轨道 · 2 漫游 · F 全屏
+    固定坐标：<b>-Z Up</b> · 第一人称 Pitch ±45° · 轨道 Pitch ±55° · Roll 0°<br>手机漫游：左侧摇杆移动 · 右侧滑动视角 · ↑/↓ 升降<br>
+    快捷键：H 首页 · 1 轨道 · 2 漫游 · F 全屏 · P 项目 · Q 分享
   </div>
 
   <input id="fileInput" type="file" accept=".ply,.spz,.splat,.ksplat,.sog,.zip" hidden>
+</div>
+
+
+<div id="introOverlay">
+  <div id="introCard">
+    <div id="introBrand">
+      <div id="introBrandLogoBox">
+        <img id="introBrandLogo" src="assets/crcc_logo.png" alt="中国铁建 CRCC">
+      </div>
+      <div id="introBrandName">
+        <b>中国铁建 · CRCC</b>
+        数字化三维场景展示
+      </div>
+    </div>
+    <div id="introEyebrow">AGV · 3DGS · DIGITAL TWIN</div>
+    <h1 id="introTitle">AGV Metric<br>Gaussian Digital Twin</h1>
+    <div id="introCn">真实场景三维重建与数字孪生展示</div>
+    <div id="introDesc">
+      基于 3D Gaussian Splatting 的真实场景重建成果。
+      支持浏览器端实时查看、轨道浏览与第一人称漫游，
+      用于展示真实场景三维重建和数字孪生可视化结果。
+    </div>
+    <div id="introTags">
+      <span class="introTag">3D Gaussian Splatting</span>
+      <span class="introTag">Web Interactive Viewer</span>
+      <span class="introTag">First-person Navigation</span>
+      <span class="introTag">Digital Twin</span>
+    </div>
+    <div id="introActions">
+      <button id="enterSceneBtn" class="primaryBtn">进入场景</button>
+      <button id="introShareBtn" class="secondaryBtn">扫码分享</button>
+    </div>
+    <div id="introFoot">
+      推荐使用 Chrome / Edge 桌面浏览器。首次访问需要加载 3DGS 模型。
+    </div>
+  </div>
+</div>
+
+<div id="sharePanel" class="glass">
+  <div class="sectionTitle">分享此数字孪生场景</div>
+  <div class="meta">手机扫描二维码即可打开同一个公网 Viewer。</div>
+  <img id="shareQr" src="assets/share_qr.png" alt="3DGS Viewer 分享二维码">
+  <div id="shareUrl">https://yuhengd83-cell.github.io/gaussian-digital-twin/</div>
+  <div class="shareActions">
+    <button id="copyLinkBtn" class="settingsBtn">复制链接</button>
+    <button id="closeShareBtn" class="settingsBtn">关闭</button>
+  </div>
 </div>
 
 <div id="drop" class="glass">
@@ -125,6 +514,20 @@ button,input{font:inherit}
   <div class="row">
     <button id="dropOpenBtn" class="settingsBtn">选择本地模型</button>
   </div>
+</div>
+
+
+<div id="mobileControls">
+  <div id="mobileLookZone" aria-label="右侧滑动调整视角"></div>
+  <div id="joystickWrap" aria-label="虚拟移动摇杆">
+    <div id="joystickBase"></div>
+    <div id="joystickKnob"></div>
+  </div>
+  <div id="verticalBtns">
+    <button id="mobileUpBtn" class="mobileRoundBtn" type="button" aria-label="上升">↑</button>
+    <button id="mobileDownBtn" class="mobileRoundBtn" type="button" aria-label="下降">↓</button>
+  </div>
+  <div id="mobileLookHint">右侧滑动调整视角</div>
 </div>
 
 <div id="modeHint" class="glass">
@@ -137,8 +540,22 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { SparkRenderer, SplatMesh, transcodeSpz } from "@sparkjsdev/spark";
 
 const $=id=>document.getElementById(id);
+const REPORT_TITLE="AGV Metric Gaussian Digital Twin";
+const REPORT_SUBTITLE="真实场景三维重建与数字孪生展示";
+const PUBLIC_URL="https://yuhengd83-cell.github.io/gaussian-digital-twin/";
+
 const canvas=$("viewer"),statusEl=$("status"),statsEl=$("stats"),errorEl=$("error");
 const dropEl=$("drop"),progressWrap=$("progressWrap"),crosshair=$("crosshair"),settingsEl=$("settings");
+const loadingOverlay=$("loadingOverlay");
+const loadingStage=$("loadingStage");
+const loadingPercent=$("loadingPercent");
+const loadingBar=$("loadingBar");
+const loadingBytes=$("loadingBytes");
+const joystickWrap=$("joystickWrap");
+const joystickKnob=$("joystickKnob");
+const mobileLookZone=$("mobileLookZone");
+const IS_TOUCH=(navigator.maxTouchPoints||0)>0 || matchMedia("(pointer: coarse)").matches;
+
 
 const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:"high-performance"});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
@@ -172,7 +589,83 @@ let currentModel=null,currentId="",currentBytes=null,currentFile=null,currentUrl
 let sceneRadius=2,autoView=null,loading=false,permanentConfig=null;
 
 function setStatus(t){statusEl.textContent=t}
-function setLoading(v,t=""){loading=v;progressWrap.style.display=v?"block":"none";if(t)setStatus(t)}
+function setLoading(v,t=""){
+  loading=v;
+  progressWrap.style.display=v?"block":"none";
+  if(t)setStatus(t);
+
+  if(v){
+    loadingOverlay.classList.remove("hidden");
+    if(t)loadingStage.textContent=t;
+  }else{
+    loadingOverlay.classList.add("hidden");
+    loadingBar.classList.remove("parsing");
+  }
+}
+
+function formatMB(n){
+  return (n/1024/1024).toFixed(1)+" MB";
+}
+
+function setDownloadProgress(received,total){
+  loadingBar.classList.remove("parsing");
+
+  if(total>0){
+    const pct=Math.max(0,Math.min(100,(received/total)*100));
+    loadingPercent.textContent=Math.round(pct)+"%";
+    loadingBar.style.width=pct.toFixed(1)+"%";
+    loadingStage.textContent="正在下载 3DGS 模型…";
+    loadingBytes.textContent=formatMB(received)+" / "+formatMB(total);
+  }else{
+    loadingPercent.textContent="…";
+    loadingBar.classList.add("parsing");
+    loadingStage.textContent="正在下载 3DGS 模型…";
+    loadingBytes.textContent=formatMB(received)+" 已接收";
+  }
+}
+
+function setParsingStage(){
+  loadingPercent.textContent="100%";
+  loadingBar.style.width="100%";
+  loadingBar.classList.add("parsing");
+  loadingStage.textContent="模型下载完成，正在解析高斯场景…";
+  loadingBytes.textContent="正在构建可交互场景，请稍候";
+}
+
+async function fetchBytesWithProgress(url){
+  const r=await fetch(url,{cache:"default"});
+  if(!r.ok)throw new Error("模型下载失败："+r.status+" "+r.statusText);
+
+  const total=Number(r.headers.get("content-length"))||0;
+
+  if(!r.body || !r.body.getReader){
+    const buf=await r.arrayBuffer();
+    setDownloadProgress(buf.byteLength,buf.byteLength);
+    return new Uint8Array(buf);
+  }
+
+  const reader=r.body.getReader();
+  const chunks=[];
+  let received=0;
+
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    chunks.push(value);
+    received+=value.byteLength;
+    setDownloadProgress(received,total);
+  }
+
+  const bytes=new Uint8Array(received);
+  let offset=0;
+  for(const chunk of chunks){
+    bytes.set(chunk,offset);
+    offset+=chunk.byteLength;
+  }
+
+  if(total===0)setDownloadProgress(received,received);
+  return bytes;
+}
 function clearError(){errorEl.style.display="none";errorEl.textContent=""}
 function showError(e){console.error(e);errorEl.style.display="block";errorEl.textContent="错误："+(e?.message||String(e))}
 let toastTimer=null;
@@ -184,9 +677,41 @@ function toast(msg){
   toastTimer=setTimeout(()=>el.classList.remove("show"),1600);
 }
 function updateModeHint(){
-  $("modeHintText").innerHTML = mode==="fps"
-    ? "<b>漫游模式</b> · 点击画面锁定鼠标 · WASD 移动 · Space/Shift 升降 · Esc 释放鼠标"
-    : "<b>轨道模式</b> · 左键旋转 · 右键平移 · 滚轮缩放";
+  if(IS_TOUCH && mode==="fps"){
+    $("modeHintText").innerHTML="<b>手机漫游</b> · 左侧摇杆移动 · 右侧滑动视角 · ↑/↓ 升降";
+  }else{
+    $("modeHintText").innerHTML = mode==="fps"
+      ? "<b>漫游模式</b> · 点击画面锁定鼠标 · WASD 移动 · Space/Shift 升降 · Esc 释放鼠标"
+      : "<b>轨道模式</b> · 左键旋转 · 右键平移 · 滚轮缩放";
+  }
+}
+function showIntro(){
+  $("introOverlay").classList.remove("hidden");
+}
+function hideIntro(){
+  $("introOverlay").classList.add("hidden");
+}
+function openShare(){
+  $("sharePanel").classList.add("open");
+  $("shareBtn").classList.add("active");
+}
+function closeShare(){
+  $("sharePanel").classList.remove("open");
+  $("shareBtn").classList.remove("active");
+}
+async function copyPublicLink(){
+  try{
+    await navigator.clipboard.writeText(PUBLIC_URL);
+    toast("公网链接已复制");
+  }catch(_){
+    const ta=document.createElement("textarea");
+    ta.value=PUBLIC_URL;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    toast("公网链接已复制");
+  }
 }
 function homeKey(){return "3dgs-viewer-home-v3:"+currentId}
 
@@ -239,8 +764,8 @@ async function loadPermanentConfig(){
     const r=await fetch("viewer_config.json",{cache:"no-store"});
     if(!r.ok)return null;
     permanentConfig=await r.json();
-    if(permanentConfig?.projectTitle) $("brandTitle").textContent=permanentConfig.projectTitle;
-    if(permanentConfig?.projectSubtitle) $("brandSub").textContent=permanentConfig.projectSubtitle;
+    $("brandTitle").textContent=REPORT_TITLE;
+    $("brandSub").textContent=REPORT_SUBTITLE;
     return permanentConfig;
   }catch(_){return null}
 }
@@ -265,8 +790,8 @@ function exportPermanentHome(){
     firstPersonPitchLimitDeg:45,
     orbitPitchLimitDeg:55,
     rollLocked:true,
-    projectTitle:$("brandTitle").textContent,
-    projectSubtitle:$("brandSub").textContent
+    projectTitle:REPORT_TITLE,
+    projectSubtitle:REPORT_SUBTITLE
   },"viewer_config.json");
   setStatus("已导出新的 viewer_config.json（固定 -Z-up、±65°/±75°、Roll 锁死）。");
 }
@@ -346,6 +871,7 @@ async function addModel(init,id){
   removeModel();
   clearError();
   setLoading(true,"正在解析 3DGS 模型...");
+  setParsingStage();
   currentId=id;
 
   currentModel=new SplatMesh(init);
@@ -391,6 +917,10 @@ async function loadLocalFile(file){
 
   try{
     setLoading(true,`正在读取 ${file.name} ...`);
+    loadingPercent.textContent="…";
+    loadingBar.classList.add("parsing");
+    loadingStage.textContent="正在读取本地模型…";
+    loadingBytes.textContent=file.name;
     const bytes=new Uint8Array(await file.arrayBuffer());
     currentBytes=bytes;
     await addModel({fileBytes:bytes.slice(),fileName:file.name},"local:"+file.name);
@@ -420,12 +950,40 @@ async function loadUrl(url){
   currentFile=null;
   currentUrl=url;
   currentBytes=null;
-  await addModel({url},"url:"+url);
+
+  try{
+    setLoading(true,"正在下载 3DGS 模型…");
+    loadingPercent.textContent="0%";
+    loadingBar.style.width="0%";
+    loadingBar.classList.remove("parsing");
+    loadingBytes.textContent="准备下载模型";
+
+    const bytes=await fetchBytesWithProgress(url);
+    currentBytes=bytes;
+
+    setParsingStage();
+
+    const fileName=(url.split("/").pop()||"splat.spz").split("?")[0];
+    await addModel(
+      {fileBytes:bytes.slice(),fileName},
+      "url:"+url
+    );
+  }catch(e){
+    setLoading(false);
+    showError(e);
+    setStatus("模型加载失败。");
+    loadingOverlay.classList.remove("hidden");
+    loadingPercent.textContent="加载失败";
+    loadingBar.classList.remove("parsing");
+    loadingBar.style.width="0%";
+    loadingStage.textContent=e?.message||String(e);
+    loadingBytes.textContent="请检查网络后刷新页面重试";
+  }
 }
 
 async function tryAutoLoad(){
   if(location.protocol==="file:"){
-    setStatus("当前是 file:// 模式，请使用启动脚本。");
+    setLoading(false);setStatus("当前是 file:// 模式，请使用启动脚本。");
     return;
   }
 
@@ -444,7 +1002,7 @@ async function tryAutoLoad(){
     }
   }
 
-  setStatus("未发现默认模型，请选择或拖入模型。");
+  setLoading(false);setStatus("未发现默认模型，请选择或拖入模型。");
 }
 
 function resetHome(){
@@ -543,7 +1101,8 @@ function enterFps(){
 
   setStatus("第一人称：鼠标向右=视角向右；W/S 前后，A/D 左右，Space/Shift 上下；Pitch 硬限制 ±45°，Roll 锁死。");
   updateModeHint();
-  toast("已切换到漫游模式");
+  updateMobileUi();
+  toast(IS_TOUCH?"已切换到手机漫游模式":"已切换到漫游模式");
 }
 
 function enterOrbit(){
@@ -569,12 +1128,15 @@ function enterOrbit(){
   orbit.update();
 
   setStatus("轨道模式：水平 360°；上下硬限制 ±55°；禁止翻转。");
+  resetJoystick();
+  mobileVertical=0;
   updateModeHint();
+  updateMobileUi();
   toast("已切换到轨道模式");
 }
 
 canvas.addEventListener("click",()=>{
-  if(mode==="fps"&&document.pointerLockElement!==canvas){
+  if(mode==="fps"&&!IS_TOUCH&&document.pointerLockElement!==canvas){
     canvas.requestPointerLock();
   }
 });
@@ -605,6 +1167,133 @@ document.addEventListener("mousemove",e=>{
 
 const keys=new Set();
 
+// ===== 手机摇杆 / 右侧滑动视角 =====
+let joystickX=0;
+let joystickY=0;
+let joystickPointerId=null;
+let joystickCenterX=0;
+let joystickCenterY=0;
+let joystickRadius=46;
+
+let lookPointerId=null;
+let lastLookX=0;
+let lastLookY=0;
+const touchLookSensitivity=.0040;
+
+let mobileVertical=0;
+
+function updateMobileUi(){
+  document.body.classList.toggle("mobile-fps",IS_TOUCH && mode==="fps");
+  if(IS_TOUCH && mode==="fps"){
+    $("modeHintText").innerHTML="<b>手机漫游</b> · 左侧摇杆移动 · 右侧滑动视角 · ↑/↓ 升降";
+  }
+}
+
+function resetJoystick(){
+  joystickX=0;
+  joystickY=0;
+  joystickPointerId=null;
+  joystickKnob.style.transform="translate(0px,0px)";
+}
+
+function updateJoystickFromPointer(e){
+  const dx=e.clientX-joystickCenterX;
+  const dy=e.clientY-joystickCenterY;
+  const len=Math.hypot(dx,dy);
+  const clamped=Math.min(len,joystickRadius);
+  const nx=len>0?dx/len:0;
+  const ny=len>0?dy/len:0;
+  const px=nx*clamped;
+  const py=ny*clamped;
+
+  joystickKnob.style.transform=`translate(${px}px,${py}px)`;
+
+  joystickX=px/joystickRadius;
+  joystickY=py/joystickRadius;
+
+  const dead=.12;
+  if(Math.abs(joystickX)<dead)joystickX=0;
+  if(Math.abs(joystickY)<dead)joystickY=0;
+}
+
+joystickWrap.addEventListener("pointerdown",e=>{
+  if(!IS_TOUCH || mode!=="fps")return;
+  joystickPointerId=e.pointerId;
+  const r=joystickWrap.getBoundingClientRect();
+  joystickCenterX=r.left+r.width/2;
+  joystickCenterY=r.top+r.height/2;
+  joystickRadius=Math.max(36,Math.min(r.width,r.height)*.36);
+  joystickWrap.setPointerCapture(e.pointerId);
+  updateJoystickFromPointer(e);
+  e.preventDefault();
+});
+
+joystickWrap.addEventListener("pointermove",e=>{
+  if(e.pointerId!==joystickPointerId)return;
+  updateJoystickFromPointer(e);
+  e.preventDefault();
+});
+
+for(const ev of ["pointerup","pointercancel","lostpointercapture"]){
+  joystickWrap.addEventListener(ev,e=>{
+    if(joystickPointerId===null || e.pointerId===joystickPointerId){
+      resetJoystick();
+    }
+  });
+}
+
+mobileLookZone.addEventListener("pointerdown",e=>{
+  if(!IS_TOUCH || mode!=="fps")return;
+  lookPointerId=e.pointerId;
+  lastLookX=e.clientX;
+  lastLookY=e.clientY;
+  mobileLookZone.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+
+mobileLookZone.addEventListener("pointermove",e=>{
+  if(e.pointerId!==lookPointerId || mode!=="fps")return;
+
+  const dx=e.clientX-lastLookX;
+  const dy=e.clientY-lastLookY;
+  lastLookX=e.clientX;
+  lastLookY=e.clientY;
+
+  fpsYaw+=dx*touchLookSensitivity;
+  fpsPitch-=dy*touchLookSensitivity;
+  fpsPitch=THREE.MathUtils.clamp(fpsPitch,-MAX_FP_PITCH,MAX_FP_PITCH);
+  updateFpsRotation();
+  e.preventDefault();
+});
+
+for(const ev of ["pointerup","pointercancel","lostpointercapture"]){
+  mobileLookZone.addEventListener(ev,e=>{
+    if(lookPointerId===null || e.pointerId===lookPointerId){
+      lookPointerId=null;
+    }
+  });
+}
+
+function bindHoldButton(id,value){
+  const el=$(id);
+  const stop=()=>{
+    mobileVertical=0;
+    el.classList.remove("active");
+  };
+  el.addEventListener("pointerdown",e=>{
+    if(!IS_TOUCH || mode!=="fps")return;
+    mobileVertical=value;
+    el.classList.add("active");
+    el.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  });
+  el.addEventListener("pointerup",stop);
+  el.addEventListener("pointercancel",stop);
+  el.addEventListener("lostpointercapture",stop);
+}
+bindHoldButton("mobileUpBtn",1);
+bindHoldButton("mobileDownBtn",-1);
+
 addEventListener("keydown",e=>{
   const tag=(e.target?.tagName||"").toLowerCase();
   const editing=tag==="input"||tag==="textarea"||tag==="select";
@@ -614,6 +1303,12 @@ addEventListener("keydown",e=>{
     if(e.code==="Digit1"){ enterOrbit(); return; }
     if(e.code==="Digit2"){ enterFps(); return; }
     if(e.code==="KeyF"){ toggleFullscreen(); return; }
+    if(e.code==="KeyP"){ showIntro(); return; }
+    if(e.code==="KeyQ"){
+      if($("sharePanel").classList.contains("open")) closeShare();
+      else openShare();
+      return;
+    }
   }
 
   keys.add(e.code);
@@ -633,7 +1328,8 @@ addEventListener("blur",()=>keys.clear());
 const clock=new THREE.Clock();
 
 function updateFpsMove(dt){
-  if(mode!=="fps"||document.pointerLockElement!==canvas)return;
+  if(mode!=="fps")return;
+  if(!IS_TOUCH && document.pointerLockElement!==canvas)return;
 
   const a=Number($("speed").value)*dt;
 
@@ -644,17 +1340,32 @@ function updateFpsMove(dt){
 
   groundRight.crossVectors(groundForward,SCENE_UP).normalize();
 
+  // 桌面键盘
   if(keys.has("KeyW"))camera.position.addScaledVector(groundForward,a);
   if(keys.has("KeyS"))camera.position.addScaledVector(groundForward,-a);
-
   if(keys.has("KeyA"))camera.position.addScaledVector(groundRight,-a);
   if(keys.has("KeyD"))camera.position.addScaledVector(groundRight,a);
 
+  // 手机左侧摇杆：上推=前进，下拉=后退，左右=横移
+  let jx=joystickX;
+  let jy=joystickY;
+  const jmag=Math.hypot(jx,jy);
+  if(jmag>1){
+    jx/=jmag;
+    jy/=jmag;
+  }
+  if(jx!==0)camera.position.addScaledVector(groundRight,jx*a);
+  if(jy!==0)camera.position.addScaledVector(groundForward,-jy*a);
+
   // -Z 就是现实“向上”
   if(keys.has("Space"))camera.position.addScaledVector(SCENE_UP,a);
-
   if(keys.has("ShiftLeft")||keys.has("ShiftRight")){
     camera.position.addScaledVector(SCENE_UP,-a);
+  }
+
+  // 手机升降按钮
+  if(mobileVertical!==0){
+    camera.position.addScaledVector(SCENE_UP,mobileVertical*a);
   }
 }
 
@@ -727,6 +1438,15 @@ async function exportSpz(){
 // ========== UI ==========
 const fileInput=$("fileInput");
 
+$("projectBtn").onclick=showIntro;
+$("enterSceneBtn").onclick=hideIntro;
+$("shareBtn").onclick=()=>{
+  if($("sharePanel").classList.contains("open")) closeShare();
+  else openShare();
+};
+$("introShareBtn").onclick=()=>{hideIntro();openShare();};
+$("closeShareBtn").onclick=closeShare;
+$("copyLinkBtn").onclick=copyPublicLink;
 $("homeTopBtn").onclick=()=>{resetHome();toast("已回到首页视角");};
 $("settingsBtn").onclick=()=>{
   settingsEl.classList.toggle("open");
@@ -854,7 +1574,10 @@ renderer.setAnimationLoop(()=>{
   }
 });
 
+$("brandTitle").textContent=REPORT_TITLE;
+$("brandSub").textContent=REPORT_SUBTITLE;
 updateModeHint();
+updateMobileUi();
 tryAutoLoad();
 </script>
 </body>
