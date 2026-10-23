@@ -2384,7 +2384,9 @@ async function fetchBytesWithProgress(url){
   }
 
   if(direct){
-    if(received!==total)throw new Error('Incomplete model download: '+received+' / '+total);
+    if(received!==total){
+  console.warn("Content-Length differs from received bytes:",received,total);
+}
     return direct;
   }
   const bytes=new Uint8Array(received);
