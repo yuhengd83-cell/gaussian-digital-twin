@@ -1,0 +1,3415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AGV Digital Twin v5.5.4.2 - Driving Simulation</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#fff;font-family:"Microsoft YaHei",Inter,system-ui,sans-serif}
+button,input{font:inherit}
+#viewer{display:block;width:100vw;height:100vh;outline:none}
+.glass{background:rgba(13,17,24,.72);border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 14px 42px rgba(0,0,0,.28)}
+#brand{position:fixed;z-index:20;left:18px;top:18px;padding:12px 14px;border-radius:12px;pointer-events:none}
+#brandTitle{font-size:15px;font-weight:700;letter-spacing:.2px}
+#brandSub{font-size:11px;color:#aeb8c6;margin-top:3px}
+#toolbar{position:fixed;z-index:25;right:18px;top:18px;display:flex;gap:7px;padding:7px;border-radius:12px}
+.toolbtn{min-width:70px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#f5f7fb;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px}
+.toolbtn:hover{background:rgba(255,255,255,.13)}
+.toolbtn.active{background:rgba(89,146,255,.23);border-color:rgba(111,165,255,.55)}
+#settings{position:fixed;z-index:24;right:18px;top:78px;width:370px;max-width:calc(100vw - 36px);padding:14px;border-radius:14px;display:none}
+#settings.open{display:block}
+.sectionTitle{font-size:12px;font-weight:700;color:#eaf0f8;margin:2px 0 7px}
+.meta{font-size:11px;line-height:1.55;color:#aab3c0;word-break:break-all}
+#status{margin-top:5px;color:#c8d1dc}
+#error{display:none;margin-top:8px;padding:8px;border-radius:8px;background:rgba(122,25,25,.34);color:#ffb6b6;font-size:11px;white-space:pre-wrap}
+.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;align-items:center}
+.settingsBtn{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;border-radius:8px;padding:7px 9px;cursor:pointer;font-size:11px}
+.settingsBtn:hover{background:rgba(255,255,255,.12)}
+.settingsBtn:disabled{opacity:.42;cursor:default}
+#speedWrap{display:grid;grid-template-columns:auto 1fr 44px;gap:9px;align-items:center;margin-top:9px;font-size:11px;color:#b2bbc8}
+#speed{width:100%}
+#pitchReadout{margin-top:6px;font-size:11px;color:#d9e1ec}
+#progressWrap{display:none;margin-top:9px;height:4px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.07)}
+#progress{width:32%;height:100%;border-radius:999px;background:linear-gradient(90deg,#72a9ff,#8fe7ff);animation:slide 1.1s ease-in-out infinite alternate}
+@keyframes slide{from{transform:translateX(-85%)}to{transform:translateX(270%)}}
+#drop{position:fixed;z-index:30;left:50%;top:50%;width:min(540px,calc(100vw - 40px));transform:translate(-50%,-50%);padding:42px 26px;text-align:center;border:1px dashed rgba(255,255,255,.30);border-radius:18px;background:rgba(12,16,23,.92)}
+#drop.hidden{display:none}
+#drop h2{margin:0 0 9px;font-size:20px}
+#drop p{margin:5px 0;color:#aeb8c5;font-size:12px;line-height:1.6}
+#drop .row{justify-content:center}
+#crosshair{position:fixed;z-index:12;left:50%;top:50%;width:8px;height:8px;margin:-4px;border:1px solid rgba(255,255,255,.86);border-radius:50%;display:none;pointer-events:none}
+#modeHint{position:fixed;z-index:18;left:50%;bottom:20px;transform:translateX(-50%);padding:9px 12px;border-radius:10px;font-size:11px;color:#c0c8d3;white-space:nowrap;opacity:.92}
+#modeHint b{color:#fff}
+#toast{position:fixed;z-index:40;left:50%;top:24px;transform:translateX(-50%) translateY(-14px);padding:9px 13px;border-radius:9px;background:rgba(18,23,31,.92);border:1px solid rgba(255,255,255,.10);font-size:12px;color:#f2f5f8;opacity:0;pointer-events:none;transition:.2s}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:760px){
+  #brand{left:10px;top:10px}
+  #toolbar{right:10px;top:10px}
+  #settings{right:10px;top:68px;width:calc(100vw - 20px)}
+  .toolbtn{min-width:0;padding:8px}
+  #brandSub{display:none}
+  #modeHint{bottom:10px;max-width:calc(100vw - 20px);white-space:normal;text-align:center}
+}
+
+/* ===== v5.2 汇报展示层 ===== */
+#brandTitle{font-size:16px}
+#brandSub{max-width:380px}
+
+#introOverlay{
+  position:fixed;z-index:60;inset:0;
+  display:flex;align-items:center;justify-content:flex-start;
+  padding:clamp(28px,7vw,96px);
+  background:
+    linear-gradient(90deg,rgba(7,10,15,.84) 0%,rgba(7,10,15,.68) 38%,rgba(7,10,15,.18) 68%,rgba(7,10,15,0) 100%);
+  transition:opacity .28s ease,visibility .28s ease;
+}
+#introOverlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
+#introCard{
+  width:min(590px,calc(100vw - 44px));
+  padding:28px 30px;border-radius:20px;
+  background:rgba(11,15,22,.72);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+#introEyebrow{
+  font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+  color:#aeb9c8;margin-bottom:12px
+}
+#introTitle{
+  margin:0;font-size:clamp(28px,4vw,48px);line-height:1.06;
+  font-weight:760;letter-spacing:-.02em
+}
+#introCn{
+  margin-top:12px;font-size:17px;font-weight:650;color:#e8edf5
+}
+#introDesc{
+  margin-top:14px;max-width:520px;color:#b8c2cf;font-size:13px;line-height:1.8
+}
+#introTags{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.introTag{
+  padding:6px 9px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:#cbd3de;font-size:11px
+}
+#introActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.primaryBtn,.secondaryBtn{
+  border-radius:10px;padding:10px 15px;cursor:pointer;font-size:13px
+}
+.primaryBtn{
+  border:1px solid rgba(126,177,255,.7);
+  background:rgba(81,139,235,.34);color:white
+}
+.primaryBtn:hover{background:rgba(81,139,235,.48)}
+.secondaryBtn{
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);color:#eff3f8
+}
+.secondaryBtn:hover{background:rgba(255,255,255,.11)}
+#introFoot{
+  margin-top:16px;font-size:10px;color:#8994a3;line-height:1.5
+}
+
+#sharePanel{
+  position:fixed;z-index:70;right:18px;top:78px;
+  width:310px;max-width:calc(100vw - 36px);
+  padding:15px;border-radius:14px;display:none
+}
+#sharePanel.open{display:block}
+#shareQr{
+  display:block;width:180px;height:180px;margin:12px auto;
+  border-radius:10px;background:#fff;padding:7px
+}
+#shareUrl{
+  padding:8px 9px;border-radius:8px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+  color:#bfc8d4;font-size:10px;word-break:break-all;line-height:1.5
+}
+.shareActions{display:flex;gap:8px;margin-top:10px}
+.shareActions button{flex:1}
+
+@media(max-width:760px){
+  #introOverlay{
+    align-items:flex-end;padding:18px;
+    background:linear-gradient(180deg,rgba(7,10,15,.18) 0%,rgba(7,10,15,.76) 48%,rgba(7,10,15,.93) 100%)
+  }
+  #introCard{padding:22px 20px}
+  #introTitle{font-size:30px}
+  #sharePanel{right:10px;top:68px;width:calc(100vw - 20px)}
+}
+
+
+/* ===== v5.3 首屏加载进度 + 手机双区触控 ===== */
+#viewer{touch-action:none}
+
+/* 首次公网访问的模型加载层 */
+#loadingOverlay{
+  position:fixed;z-index:90;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(7,10,15,.84);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  transition:opacity .28s ease,visibility .28s ease;
+}
+#loadingOverlay.hidden{
+  opacity:0;visibility:hidden;pointer-events:none
+}
+#loadingCard{
+  width:min(480px,calc(100vw - 38px));
+  padding:24px 24px 22px;border-radius:18px;
+  background:rgba(13,17,24,.92);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 22px 60px rgba(0,0,0,.35)
+}
+#loadingTitle{
+  font-size:17px;font-weight:720;color:#f3f6fa
+}
+#loadingStage{
+  margin-top:7px;font-size:12px;line-height:1.6;color:#b6c0cc
+}
+#loadingPercent{
+  margin-top:18px;font-size:28px;font-weight:730;letter-spacing:-.02em
+}
+#loadingBarTrack{
+  margin-top:10px;width:100%;height:8px;border-radius:999px;
+  background:rgba(255,255,255,.08);overflow:hidden
+}
+#loadingBar{
+  width:0%;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,#6da5ff,#86e4ff);
+  transition:width .12s linear
+}
+#loadingBar.parsing{
+  width:36%!important;
+  animation:loadingSweep 1.05s ease-in-out infinite alternate
+}
+@keyframes loadingSweep{
+  from{transform:translateX(-100%)}
+  to{transform:translateX(280%)}
+}
+#loadingBytes{
+  margin-top:9px;font-size:11px;color:#8f9baa
+}
+#loadingTip{
+  margin-top:16px;padding-top:13px;border-top:1px solid rgba(255,255,255,.08);
+  font-size:10px;line-height:1.55;color:#7f8b99
+}
+
+/* 手机第一人称控制 */
+#mobileControls{
+  display:none;position:fixed;z-index:18;inset:0;
+  pointer-events:none
+}
+#mobileLookZone{
+  position:absolute;right:0;top:0;bottom:0;width:58%;
+  pointer-events:auto;touch-action:none
+}
+#mobileLookHint{
+  position:absolute;right:18px;bottom:22px;
+  font-size:10px;color:rgba(255,255,255,.62);
+  background:rgba(10,14,20,.36);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;padding:6px 9px;pointer-events:none
+}
+#joystickWrap{
+  position:absolute;left:20px;bottom:24px;
+  width:142px;height:142px;pointer-events:auto;touch-action:none
+}
+#joystickBase{
+  position:absolute;left:0;top:0;width:142px;height:142px;border-radius:50%;
+  background:rgba(10,14,20,.36);
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)
+}
+#joystickBase::before,#joystickBase::after{
+  content:"";position:absolute;background:rgba(255,255,255,.10)
+}
+#joystickBase::before{
+  left:50%;top:17px;bottom:17px;width:1px
+}
+#joystickBase::after{
+  top:50%;left:17px;right:17px;height:1px
+}
+#joystickKnob{
+  position:absolute;left:43px;top:43px;width:56px;height:56px;border-radius:50%;
+  background:rgba(238,244,255,.30);
+  border:1px solid rgba(255,255,255,.34);
+  box-shadow:0 8px 24px rgba(0,0,0,.22);
+  transform:translate(0px,0px)
+}
+#verticalBtns{
+  position:absolute;left:176px;bottom:42px;
+  display:flex;flex-direction:column;gap:9px;
+  pointer-events:auto
+}
+.mobileRoundBtn{
+  width:48px;height:48px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(10,14,20,.40);
+  color:#fff;font-size:17px;font-weight:700;
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  touch-action:none
+}
+.mobileRoundBtn.active{background:rgba(88,145,240,.42)}
+
+body.mobile-fps #mobileControls{display:block}
+body.mobile-fps #modeHint{display:none}
+
+@media(max-width:760px){
+  #toolbar{
+    gap:4px;padding:5px;max-width:calc(100vw - 20px);flex-wrap:wrap;justify-content:flex-end
+  }
+  .toolbtn{font-size:11px;padding:7px 8px}
+  #brand{max-width:48vw}
+  #brandTitle{font-size:12px}
+  #joystickWrap{left:16px;bottom:18px;width:126px;height:126px}
+  #joystickBase{width:126px;height:126px}
+  #joystickKnob{left:38px;top:38px;width:50px;height:50px}
+  #verticalBtns{left:153px;bottom:30px}
+  .mobileRoundBtn{width:44px;height:44px}
+  #mobileLookHint{right:12px;bottom:16px}
+}
+
+
+/* ===== v5.4 中国铁建 Logo ===== */
+#brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:9px 13px 9px 9px;
+  min-height:72px;
+}
+#brandLogoBox{
+  flex:0 0 auto;
+  width:68px;
+  height:58px;
+  border-radius:8px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+}
+#brandLogo{
+  width:62px;
+  height:54px;
+  object-fit:contain;
+  display:block;
+}
+#brandText{
+  min-width:0;
+}
+#brandTitle{
+  line-height:1.25;
+}
+#brandSub{
+  line-height:1.45;
+}
+
+/* 开场页中的企业标识，保持低调，不抢项目标题 */
+#introBrand{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  margin-bottom:17px;
+}
+#introBrandLogoBox{
+  width:70px;
+  height:60px;
+  border-radius:9px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+#introBrandLogo{
+  width:64px;
+  height:55px;
+  object-fit:contain;
+  display:block;
+}
+#introBrandName{
+  color:#dce3ec;
+  font-size:12px;
+  line-height:1.55;
+  letter-spacing:.04em;
+}
+#introBrandName b{
+  display:block;
+  color:#fff;
+  font-size:14px;
+  letter-spacing:.06em;
+}
+
+@media(max-width:760px){
+  #brand{
+    min-height:58px;
+    gap:8px;
+    padding:7px 9px 7px 7px;
+    max-width:56vw;
+  }
+  #brandLogoBox{
+    width:48px;
+    height:44px;
+    border-radius:7px;
+  }
+  #brandLogo{
+    width:44px;
+    height:40px;
+  }
+  #brandSub{
+    display:none;
+  }
+  #introBrand{
+    margin-bottom:14px;
+  }
+  #introBrandLogoBox{
+    width:58px;
+    height:50px;
+  }
+  #introBrandLogo{
+    width:53px;
+    height:46px;
+  }
+}
+
+
+/* AGV v5.5 Stage 1 - separate experimental overlay. */
+#agvPanel{position:fixed;z-index:28;right:18px;top:78px;width:410px;max-width:calc(100vw - 36px);max-height:calc(100vh - 110px);overflow-y:auto;display:none;padding:16px;border-radius:14px}
+#agvPanel.open{display:block}
+#agvPanel h3{font-size:15px;margin:0 0 5px;font-weight:700}
+.agvCaption{font-size:11px;line-height:1.65;color:#aeb9c8;margin:7px 0}
+.agvWarn{color:#f2c986;background:rgba(167,106,19,.15);border:1px solid rgba(242,201,134,.25);padding:8px;border-radius:8px;margin-top:8px;font-size:11px;line-height:1.6}
+.agvRow{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:9px 0}
+.agvRow label{font-size:11px;color:#c5cdd8;flex:0 0 auto}
+.agvInput{min-width:0;width:116px;background:#19212e;border:1px solid #435063;border-radius:7px;padding:6px 8px;color:white;font-size:12px}
+#agvRouteList{max-height:125px;overflow:auto;padding-left:26px;margin:8px 0;font:11px/1.7 ui-monospace,Consolas,monospace;color:#bbd8f4}
+#agvLength{font:11px/1.65 ui-monospace,Consolas,monospace;color:#cde3f5;word-break:break-word}
+#agvState{margin-top:10px;font-size:11px;color:#84d4b8;line-height:1.5}
+#agvScaleStatus{font-size:11px;line-height:1.6;color:#e5b978}
+#agvModelName{font-family:Consolas,monospace;word-break:break-all}
+@media(max-width:760px){#agvPanel{right:10px;top:74px;max-width:calc(100vw - 20px);width:calc(100vw - 20px);max-height:55vh}#toolbar{max-width:calc(100vw - 20px)}}
+
+/* ===== v5.5.2 switchable model catalog ===== */
+#modelSwitchPanel{position:fixed;z-index:29;right:18px;top:78px;width:440px;max-width:calc(100vw - 36px);padding:16px;border-radius:14px;display:none;max-height:calc(100vh - 105px);overflow:auto}
+#modelSwitchPanel.open{display:block}
+#modelSwitchPanel h3{font-size:15px;margin:0 0 8px}
+#modelSceneSelect{width:100%;min-width:0;background:#19212e;border:1px solid #435063;border-radius:8px;padding:10px;color:#fff;font-size:13px}
+#modelSwitchPanel .sceneHint{font-size:11px;line-height:1.65;color:#aeb9c8;margin-top:9px;overflow-wrap:anywhere}
+#modelSwitchPanel .warningHint{color:#f1ca88;background:rgba(152,101,23,.16);border-radius:8px;padding:9px;border:1px solid rgba(244,202,128,.2)}
+#modelSwitchPanel .switchRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+#modelSwitchInfo{color:#bcdbfd;white-space:pre-wrap}
+#activeModelTag{font-size:11px;color:#b1c3da}
+@media(max-width:760px){#modelSwitchPanel{right:10px;top:76px;width:calc(100vw - 20px);max-height:60vh}}
+
+/* v5.5.3 CAD Ackermann vehicle and per-scene placement */
+#ackermannPanel{position:fixed;z-index:36;right:18px;top:78px;width:445px;max-width:calc(100vw - 36px);padding:16px;border-radius:14px;display:none;max-height:calc(100vh - 105px);overflow:auto}
+#ackermannPanel.open{display:block}
+#ackermannPanel h3{font-size:15px;margin:0 0 10px}
+#ackermannPanel .acRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+#ackermannPanel .acGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:11px}
+#ackermannPanel .acLabel{display:flex;flex-direction:column;gap:5px;color:#c8d0df;font-size:11px}
+#ackermannPanel .acInput{width:100%;padding:8px 9px;border:1px solid rgba(255,255,255,.15);border-radius:7px;background:rgba(255,255,255,.065);color:white;font-size:13px;min-width:0}
+#ackermannPanel .acHint{color:#afbdd0;font-size:11px;line-height:1.65;margin-top:9px;white-space:pre-line}
+#ackermannPanel .acNotice{color:#f3c881;border:1px solid rgba(249,191,89,.22);background:rgba(143,92,31,.13);border-radius:8px;padding:10px;margin-top:10px;font-size:11px;line-height:1.7}
+#ackermannPanel .acDim{background:rgba(124,163,214,.10);border:1px solid rgba(124,163,214,.14);padding:9px;border-radius:9px;font-size:11px;line-height:1.7;color:#d9e5f2}
+#ackermannPanel input[type=checkbox]{accent-color:#7aa7ff}
+#ackermannState{font-size:11px;line-height:1.6;margin-top:10px;color:#bad7ff;white-space:pre-line}
+#ackermannSourceStatus{font-size:11px;line-height:1.5;color:#9aaec2;margin-top:7px}
+@media(max-width:760px){#ackermannPanel{top:75px;right:10px;width:calc(100vw - 20px);max-height:60vh;padding:12px}#ackermannPanel .acGrid{gap:6px}}
+
+
+/* v5.5.4: separate Ackermann DRIVE simulation panel. */
+#drivePanel{position:fixed;z-index:38;right:18px;top:78px;width:432px;max-width:calc(100vw - 36px);padding:15px;border-radius:14px;max-height:calc(100vh - 110px);overflow:auto;display:none}
+#drivePanel.open{display:block}
+#drivePanel h3{font-size:15px;margin:0}
+#drivePanel .driveWarn{font-size:11px;color:#facb8a;line-height:1.6;border:1px solid rgba(239,166,76,.28);background:rgba(108,73,23,.17);padding:8px;border-radius:8px;margin-top:9px}
+#drivePanel .driveRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+#drivePanel .driveCtl{flex:1;min-width:0}
+#drivePanel label{font-size:11px;color:#c5d0df}
+#drivePanel input[type=range]{width:100%;display:block;margin-top:7px}
+#drivePanel #driveTelemetry{white-space:pre-line;font:11px/1.75 ui-monospace,Consolas,monospace;color:#c6e0fc;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:11px}
+#driveStatus{font-size:11px;line-height:1.6;color:#87e3cc;white-space:pre-wrap;margin-top:8px}
+#toolbar{max-width:calc(100vw - 425px);flex-wrap:wrap;justify-content:flex-end;gap:5px}
+#toolbar .toolbtn{min-width:0;padding:8px 10px}
+@media(max-width:1070px){#toolbar{max-width:calc(100vw - 16px);top:70px;right:8px}#brand{top:10px}#drivePanel{top:147px;max-height:calc(100vh - 155px)}}
+@media(max-width:760px){#drivePanel{top:128px;right:8px;width:calc(100vw - 16px);max-height:calc(100vh - 140px)}#toolbar{top:70px;right:8px;gap:3px}#toolbar .toolbtn{padding:7px 7px;font-size:10px}}
+
+
+/* v5.5.4.2 - nonblocking auto-route confirmation */
+#driveAutoConfirmOverlay {position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(5,9,15,.68);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+#driveAutoConfirmOverlay.open {display:flex}
+#driveAutoConfirmCard {width:min(510px,calc(100vw - 30px));background:#161d27;border:1px solid #435267;border-radius:15px;padding:21px 24px;color:#f5f7fa;box-shadow:0 22px 72px rgba(0,0,0,.44)}
+#driveAutoConfirmCard h3 {font-size:17px;margin:0 0 12px}
+#driveAutoConfirmCard p {font-size:13px;line-height:1.75;color:#c5d2df;margin:6px 0}
+#driveAutoConfirmCard .driveAutoDetails {font-size:12px;border-radius:8px;background:rgba(86,125,169,.12);border:1px solid rgba(125,159,196,.25);padding:10px;margin:13px 0}
+#driveAutoConfirmCard .driveAutoActions {display:flex;justify-content:flex-end;gap:9px;margin-top:19px}
+#driveAutoConfirmCard .driveAutoActions button {padding:9px 15px;border:1px solid #65788b;border-radius:8px;background:#283343;color:white;cursor:pointer}
+#driveAutoConfirmCard #driveAutoConfirmStart {background:#1e67b7;border-color:#418fe4}
+
+/* v5.5.4.2: gradient-thick tracks; appearance is visual only */
+.traceStyleBlock{margin:11px 0 12px;padding:10px 12px;border-radius:10px;background:rgba(47,65,91,.29);border:1px solid rgba(160,192,224,.18)}
+.traceStyleHeading{font-size:12px;font-weight:700;color:#edf5ff;margin-bottom:8px}
+.traceStyleRow{display:flex;align-items:center;gap:10px;margin:9px 0}
+.traceStyleRow>label{min-width:65px;color:#ced9e6;font-size:11px}
+.traceStyleRow>input[type=range]{flex:1;min-width:0;width:auto!important;margin:0!important;accent-color:#69b9ff}
+.traceStyleSelect{flex:1;min-width:0;background:#1b2837;color:#f3f8ff;padding:5px 7px;border:1px solid #425872;border-radius:6px;font-size:11px}
+.traceStylePreview{display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:10px;color:#d3e4f7;padding:5px 0}
+.traceSwatch{display:inline-block;width:35px;height:7px;border-radius:999px}
+.tracePlanSwatch{background:linear-gradient(90deg,#00d9ff,#397cff,#be6aff,#ffad38)}
+.traceTrailSwatch{background:linear-gradient(90deg,#3ffa86,#3fece3,#f7e64d,#ff6764)}
+.traceStyleNote{font-size:10px;line-height:1.55;color:#a9bdce;margin-top:5px}
+</style>
+
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@sparkjsdev/spark":"https://sparkjs.dev/releases/spark/2.3.1/spark.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="viewer" tabindex="0"></canvas>
+<div id="crosshair"></div>
+<div id="toast"></div>
+<div id="loadingOverlay">
+  <div id="loadingCard">
+    <div id="loadingTitle">正在加载 3DGS 场景</div>
+    <div id="loadingStage">正在连接模型文件…</div>
+    <div id="loadingPercent">0%</div>
+    <div id="loadingBarTrack"><div id="loadingBar"></div></div>
+    <div id="loadingBytes">准备下载模型</div>
+    <div id="loadingTip">首次需要下载当前模型；大体积 PLY 可能需要更长时间，请等待下载与解析完成。</div>
+  </div>
+</div>
+
+
+<script>
+(function(){
+  window.__agv55Boot={ready:false,started:false};
+  var loading=document.getElementById('loadingOverlay');
+  var stage=document.getElementById('loadingStage');
+  var bytes=document.getElementById('loadingBytes');
+  var pct=document.getElementById('loadingPercent');
+  function visible(){return loading&&!loading.classList.contains('hidden');}
+  function report(message){
+    if(!visible()||window.__agv55Boot.ready)return;
+    if(stage)stage.textContent='初始化异常：'+message;
+    if(bytes)bytes.textContent='请按 F12 → Console 查看红色报错；原 v5.4 首页不受影响。';
+    if(pct)pct.textContent='检查';
+    console.error('[AGV v5.5.1 boot diagnostic]',message);
+  }
+  window.addEventListener('error',function(event){
+    if(window.__agv55Boot.ready)return;
+    var target=event.target;
+    if(target&&target!==window&&target.tagName==='SCRIPT'){
+      report('脚本资源加载失败：'+(target.src||'unknown'));
+    }else if(event.message){
+      report(event.message);
+    }
+  },true);
+  window.addEventListener('unhandledrejection',function(event){
+    if(!window.__agv55Boot.ready){
+      var reason=event.reason;
+      report('模块执行失败：'+(reason&&reason.message||String(reason)));
+    }
+  });
+  setTimeout(async function(){
+    if(window.__agv55Boot.ready||!visible())return;
+    var checks=[];
+    var paths=['models/splat.spz','models/office2.spz','models/splat.ply'];
+    for(var i=0;i<paths.length;i++){
+      try{
+        var r=await fetch(paths[i],{method:'HEAD',cache:'no-store'});
+        checks.push(paths[i]+': HTTP '+r.status);
+      }catch(e){checks.push(paths[i]+': 无法访问');}
+    }
+    if(window.__agv55Boot.ready||!visible())return;
+    if(pct)pct.textContent='检查';
+    if(stage)stage.textContent='Viewer 主程序还未启动（可能是网络模块加载失败）。';
+    if(bytes)bytes.textContent='模型文件检查：'+checks.join('；')+'。按 F12 → Console 查看具体错误。';
+  },12000);
+})();
+</script>
+
+<div id="brand" class="glass">
+  <div id="brandLogoBox">
+    <img id="brandLogo" src="assets/crcc_logo.png" alt="中国铁建 CRCC">
+  </div>
+  <div id="brandText">
+    <div id="brandTitle">AGV Metric Gaussian Digital Twin</div>
+    <div id="brandSub">真实场景三维重建与数字孪生展示</div>
+  </div>
+</div>
+
+<div id="toolbar" class="glass">
+  <button id="projectBtn" class="toolbtn">项目</button>
+  <button id="homeTopBtn" class="toolbtn">主页</button>
+  <button id="orbitBtn" class="toolbtn active">轨道</button>
+  <button id="fpsBtn" class="toolbtn">漫游</button>
+  <button id="fullBtn" class="toolbtn">全屏</button>
+  <button id="modelSwitchBtn" class="toolbtn">模型替换</button>
+  <button id="agvBtn" class="toolbtn">AGV v5.5.4.2</button>
+  <button id="ackermannBtn" class="toolbtn">Ackermann CAD</button>
+  <button id="driveBtn" class="toolbtn">驾驶 v5.5.4.2</button>
+  <button id="shareBtn" class="toolbtn">分享</button>
+  <button id="settingsBtn" class="toolbtn">设置</button>
+</div>
+
+
+<div id="modelSwitchPanel" class="glass" aria-label="Model manager">
+  <div class="switchRow" style="justify-content:space-between;margin-top:0">
+    <h3>模型替换｜v5.5.3</h3>
+    <button id="modelSwitchCloseBtn" class="settingsBtn">关闭</button>
+  </div>
+  <div class="sceneHint">当前模型：<b id="activeModelTag">--</b></div>
+  <div class="sceneHint" style="margin:12px 0 5px">场景</div>
+  <select id="modelSceneSelect" aria-label="Select a model"></select>
+  <div class="switchRow">
+    <button id="modelApplyBtn" class="settingsBtn">切换场景</button>
+    <button id="modelLocalBtn" class="settingsBtn">选择本地 PLY / SPZ</button>
+  </div>
+  <div id="modelSwitchInfo" class="sceneHint">--</div>
+  <p class="sceneHint">新模型切换后会重置路线并重新适配视角，不会套用旧场景的标定数据。</p>
+  <p class="sceneHint warningHint">注意：新 park2 场景的竖直轴和米制尺度尚未完成实物验证。模型正常显示不代表已可用于真实 AGV 导航。</p>
+</div>
+
+
+
+<div id="drivePanel" class="glass" aria-label="Ackermann driving simulation">
+  <div class="driveRow" style="justify-content:space-between;margin-top:0">
+    <h3>Ackermann | 驾驶仿真 v5.5.4.2</h3>
+    <button id="driveCloseBtn" class="settingsBtn">关闭</button>
+  </div>
+  <div class="driveWarn">仅浏览器内虚拟仿真，尚无碰撞、避障和 ROS 控制。已知长度 P1–P2 只是尺度标定线，不应作为自动巡航路线。</div>
+  <div class="driveRow"><b id="driveModeText" style="font-size:12px">待机</b><span style="font-size:11px;color:#95b1d0">车头 +X / 左转 +Yaw / Up -Z</span></div>
+  <div class="driveRow">
+    <button id="driveStartBtn" class="settingsBtn">进入手动驾驶</button>
+    <button id="driveAutoBtn" class="settingsBtn">启动自动巡航</button>
+    <button id="driveEmergencyBtn" class="settingsBtn" style="border-color:#ad6958;color:#ffd1b7">停车 / 空格</button>
+  </div>
+  <div class="driveRow">
+    <label class="driveCtl">目标速度：<span id="driveSpeedRead">0.30</span> m/s
+      <input id="driveSpeed" type="range" min="0.05" max="1.0" step="0.05" value="0.30"></label>
+  </div>
+  <div class="driveRow">
+    <label class="driveCtl">最大前轮转角：<span id="driveSteerRead">25</span>°
+      <input id="driveSteerLimit" type="range" min="10" max="25" step="1" value="25"></label>
+  </div>
+  <div class="driveRow">
+    <label><input id="driveFollow" type="checkbox"> 开启第三人称跟随相机</label>
+  </div>
+
+  <div class="traceStyleBlock" id="traceStyleBlockDrive">
+    <div class="traceStyleHeading">彩色路线与行驶轨迹</div>
+    <div class="traceStyleRow">
+      <label for="tracePaletteDrive">配色</label>
+      <select id="tracePaletteDrive" class="traceStyleSelect">
+        <option value="rainbow">彩虹渐变</option>
+        <option value="neon">霓虹蓝紫</option>
+        <option value="warm">暖色渐变</option>
+        <option value="classic">经典蓝绿</option>
+      </select>
+    </div>
+    <div class="traceStyleRow">
+      <label for="traceWidthDrive">线宽 <b id="traceWidthValueDrive">8 cm</b></label>
+      <input type="range" id="traceWidthDrive" min="0.02" max="0.20" step="0.01" value="0.08" />
+    </div>
+    <div class="traceStylePreview"><span class="traceSwatch tracePlanSwatch"></span>规划路线<span class="traceSwatch traceTrailSwatch"></span>行驶轨迹</div>
+    <div class="traceStyleNote">线宽仅是可视化效果，不代表真实道路宽度或安全通行带。</div>
+  </div>
+  <div id="driveTelemetry">等待加载模型…</div>
+  <div class="driveRow">
+    <button id="driveResetBtn" class="settingsBtn">恢复初始车位</button>
+    <button id="driveClearTrailBtn" class="settingsBtn">清除彩色行驶轨迹</button>
+    <button id="driveSaveBtn" class="settingsBtn">明确保存当前位置</button>
+  </div>
+  <div id="driveStatus">等待场景加载…</div>
+  <div style="color:#9cb0c6;font-size:11px;line-height:1.7;margin-top:10px">
+    手动驾驶：W 前进、S 倒车、A/D 转向、空格停车。<br>
+    自动巡航：先在 AGV 路线面板重新布置至少三个道路路点，使用简化 Pure Pursuit；不可用于真实道路导航。<br>
+    未点击“明确保存当前位置”时，模拟行驶不会覆盖此前导出的校准 JSON。关闭驾驶面板会停止运动。
+  </div>
+</div>
+
+
+<div id="driveAutoConfirmOverlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="driveAutoConfirmTitle">
+  <div id="driveAutoConfirmCard">
+    <h3 id="driveAutoConfirmTitle">自动巡航启动确认</h3>
+    <p>这是仅供视觉展示的虚拟运动。当前无道路碰撞检测、障碍物避让或真实机器人控制。</p>
+    <div class="driveAutoDetails" id="driveAutoConfirmDetails">--</div>
+    <p>请确认路线已避开建筑、花坛和人员等障碍；只在浏览器中进行模拟。</p>
+    <div class="driveAutoActions">
+      <button type="button" id="driveAutoConfirmCancel">取消</button>
+      <button type="button" id="driveAutoConfirmStart">确认并启动</button>
+    </div>
+  </div>
+</div>
+
+<div id="ackermannPanel" class="glass" aria-label="Ackermann CAD model calibration">
+  <div class="acRow" style="justify-content:space-between;margin-top:0">
+    <h3>Ackermann | CAD &#x5b9e;&#x5c3a;&#x6a21;&#x578b;</h3>
+    <button id="ackermannCloseBtn" class="settingsBtn">&#x5173;&#x95ed;</button>
+  </div>
+  <div class="acDim">
+    SolidWorks URDF | 10 &#x4e2a;&#x90e8;&#x4ef6; | 292,312 triangles<br>
+    &#x957f; <b>1.413 m</b> &nbsp; &#x5bbd; <b>0.768 m</b> &nbsp; &#x9ad8; <b>1.154 m</b><br>
+    &#x8f74;&#x8ddd; <b>0.803 m</b> | &#x8f6e;&#x8ddd; <b>0.688 m</b> | &#x8f6e;&#x80ce;&#x76f4;&#x5f84; <b>0.404 m</b>
+  </div>
+  <div class="acNotice">&#x5c3a;&#x5bf8;&#x6765;&#x81ea;&#x4e0a;&#x4f20;&#x7684; SolidWorks URDF/STL&#xff0c;&#x4fdd;&#x7559;&#x539f;&#x59cb;&#x7c73;&#x5236;&#x6bd4;&#x4f8b;&#x3002;&#x4f46; carConfig.yaml &#x53e6;&#x6709; carLength=2.076m&#xff1b;&#x672a;&#x5b9e;&#x8f66;&#x590d;&#x6838;&#x524d;&#x4e0d;&#x58f0;&#x79f0;&#x8fd9;&#x662f;&#x5b9e;&#x6d4b;&#x5916;&#x5f62;&#x3002;<br>&#x65b0; park2 &#x7684; 3DGS &#x672a;&#x7ecf;&#x7c73;&#x5236;&#x914d;&#x51c6;&#xff0c;&#x9700;&#x4f7f;&#x7528;&#x5df2;&#x77e5;&#x8ddd;&#x79bb;&#x8f6c;&#x6362;&#x6bd4;&#x4f8b;&#x3002;</div>
+  <div class="acHint" id="ackermannSourceStatus">&#x6a21;&#x578b;&#x672a;&#x52a0;&#x8f7d;</div>
+  <div class="acRow">
+    <label><input type="checkbox" id="ackermannVisible" checked> &#x663e;&#x793a;&#x5c0f;&#x8f66;</label>
+    <button id="ackermannFocusBtn" class="settingsBtn">&#x805a;&#x7126;&#x5c0f;&#x8f66;</button>
+    <button id="ackermannPlaceBtn" class="settingsBtn">&#x70b9;&#x51fb;&#x53c2;&#x8003;&#x5730;&#x9762;&#x653e;&#x7f6e;</button>
+  </div>
+  <div class="acGrid">
+    <label class="acLabel">X (Viewer)<input id="ackermannX" class="acInput" type="number" step="0.01" value="0"></label>
+    <label class="acLabel">Y (Viewer)<input id="ackermannY" class="acInput" type="number" step="0.01" value="0"></label>
+    <label class="acLabel">&#x53c2;&#x8003;&#x5730;&#x9762; Z<input id="ackermannGroundZ" class="acInput" type="number" step="0.01" value="0"></label>
+    <label class="acLabel">Yaw (&#x5ea6;, +&#x4e3a;&#x7ed5;-Z)<input id="ackermannYaw" class="acInput" type="number" step="5" value="0"></label>
+    <label class="acLabel" style="grid-column:1/-1">&#x6bcf;&#x7c73;&#x5bf9;&#x5e94;&#x7684; Viewer &#x5355;&#x4f4d; (u/m)
+      <input id="ackermannUnitsPerMeter" class="acInput" type="number" min="0.0001" step="0.01" value="1">
+    </label>
+  </div>
+  <div class="acHint" id="ackermannScaleStatus">&#x5c1a;&#x672a;&#x5b9e;&#x7269;&#x914d;&#x51c6;</div>
+  <div class="acRow">
+    <button id="ackermannApplyBtn" class="settingsBtn">&#x5e94;&#x7528;&#x4f4d;&#x7f6e;&#x548c;&#x6bd4;&#x4f8b;</button>
+    <button id="ackermannRouteScaleBtn" class="settingsBtn">&#x4ece; AGV P1-P2 &#x4f30;&#x7b97;&#x6bd4;&#x4f8b;</button>
+    <button id="ackermannExportBtn" class="settingsBtn">&#x5bfc;&#x51fa;&#x5c0f;&#x8f66;&#x914d;&#x7f6e;</button>
+    <button id="ackermannImportBtn" class="settingsBtn">导入小车配置 JSON</button>
+    <input type="file" id="ackermannImportFile" accept=".json,application/json" hidden>
+  </div>
+  <div class="acHint">&#x5c0f;&#x8f66;&#x539f;&#x70b9;&#x4f4d;&#x4e8e;&#x540e;&#x8f74;&#x9644;&#x8fd1;&#x3002;&#x653e;&#x7f6e;&#x52a8;&#x4f5c;&#x4e0e;&#x8def;&#x7ebf;&#x7f16;&#x8f91;&#x4f7f;&#x7528;&#x540c;&#x4e00;&#x53c2;&#x8003;&#x5730;&#x9762;&#x3002;&#x4f4d;&#x7f6e;&#x4e0e;&#x6bd4;&#x4f8b;&#x53ea;&#x662f;&#x6d4f;&#x89c8;&#x5668;&#x6f14;&#x793a;&#xff0c;&#x975e;&#x5b89;&#x5168;&#x5bfc;&#x822a;&#x7cfb;&#x7edf;&#x3002;</div>
+  <div id="ackermannState">&#x7b49;&#x5f85; 3DGS &#x573a;&#x666f;&#x52a0;&#x8f7d;...</div>
+</div>
+
+<div id="agvPanel" class="glass" aria-label="AGV experimental route editor">
+  <div class="agvRow" style="justify-content:space-between;margin-top:0">
+    <h3>AGV v5.5.4.2 | 场景轨迹实验</h3>
+    <button id="agvCloseBtn" class="settingsBtn">关闭</button>
+  </div>
+  <div class="agvWarn">当前只是虚拟 AGV 路线可视化。参考地面为估算平面，未完成真实比例尺与 ROS map 配准，不可用于真实机器人导航。</div>
+  <div class="agvCaption">当前模型：<span id="agvModelName">--</span><br>Viewer: X / Y 在参考地面中，上方为 -Z。红 X，绿 Y，蓝 Z。</div>
+  <div class="agvRow">
+    <button id="agvGridBtn" class="settingsBtn">显示/隐藏参考网格</button>
+    <label for="agvGroundZ">地面 Z</label><input id="agvGroundZ" class="agvInput" type="number" step="0.01" value="0">
+  </div>
+  <div class="agvCaption">网格高度是估计，先调整 Z 使其与地面视觉对齐。初期仅建议在地面上画路线。</div>
+  <div class="agvRow">
+    <button id="agvPlaceBtn" class="settingsBtn">开始布点</button>
+    <button id="agvUndoBtn" class="settingsBtn">撤销末点</button>
+    <button id="agvClearBtn" class="settingsBtn">清空路点</button>
+  </div>
+  <div class="agvCaption">轨道模式下点击「开始布点」，再点场景放置 P1/P2/P3。布点期间暂停旋转，Esc 退出。</div>
+
+  <div class="traceStyleBlock" id="traceStyleBlockAgv">
+    <div class="traceStyleHeading">彩色路线与行驶轨迹</div>
+    <div class="traceStyleRow">
+      <label for="tracePaletteAgv">配色</label>
+      <select id="tracePaletteAgv" class="traceStyleSelect">
+        <option value="rainbow">彩虹渐变</option>
+        <option value="neon">霓虹蓝紫</option>
+        <option value="warm">暖色渐变</option>
+        <option value="classic">经典蓝绿</option>
+      </select>
+    </div>
+    <div class="traceStyleRow">
+      <label for="traceWidthAgv">线宽 <b id="traceWidthValueAgv">8 cm</b></label>
+      <input type="range" id="traceWidthAgv" min="0.02" max="0.20" step="0.01" value="0.08" />
+    </div>
+    <div class="traceStylePreview"><span class="traceSwatch tracePlanSwatch"></span>规划路线<span class="traceSwatch traceTrailSwatch"></span>行驶轨迹</div>
+    <div class="traceStyleNote">线宽仅是可视化效果，不代表真实道路宽度或安全通行带。</div>
+  </div>
+  <div id="agvLength">0 points</div>
+  <ol id="agvRouteList"></ol>
+  <div class="agvRow">
+    <label for="agvKnownMeters">P1–P2 实测长度(m)</label>
+    <input id="agvKnownMeters" class="agvInput" type="number" step="0.001" min="0" placeholder="e.g. 2.4">
+    <button id="agvScaleBtn" class="settingsBtn">估算比例尺</button>
+  </div>
+  <div id="agvScaleStatus">--</div>
+  <div class="agvRow">
+    <button id="agvSaveBtn" class="settingsBtn">保存本地草稿</button>
+    <button id="agvExportBtn" class="settingsBtn">导出路线 + 标定 JSON</button>
+  </div>
+  <div id="agvState">等待模型...</div>
+</div>
+
+<div id="settings" class="glass">
+  <div class="sectionTitle">查看器状态</div>
+  <div id="status" class="meta">正在初始化...</div>
+  <div id="stats" class="meta">FPS: --</div>
+  <div id="pitchReadout">Pitch: 0.0° / ±45°</div>
+  <div id="error"></div>
+  <div id="progressWrap"><div id="progress"></div></div>
+
+  <div class="sectionTitle" style="margin-top:13px">漫游速度</div>
+  <div id="speedWrap">
+    <span>速度</span>
+    <input id="speed" type="range" min="0.05" max="2.0" value="0.30" step="0.05">
+    <span id="speedValue">0.30</span>
+  </div>
+
+  <div class="sectionTitle" style="margin-top:13px">模型与视角</div>
+  <div class="row">
+    <button id="openBtn" class="settingsBtn">选择模型</button>
+    <button id="autoBtn" class="settingsBtn">自动适配</button>
+    <button id="saveHomeBtn" class="settingsBtn">设当前为首页</button>
+    <button id="resetBtn" class="settingsBtn">回首页</button>
+  </div>
+  <div class="row">
+    <button id="exportHomeBtn" class="settingsBtn">导出首页配置</button>
+    <button id="clearHomeBtn" class="settingsBtn">清除浏览器视角</button>
+    <button id="exportSpzBtn" class="settingsBtn" disabled>导出 SPZ</button>
+    <button id="dropBtn" class="settingsBtn">拖放模型</button>
+  </div>
+
+  <div class="meta" style="margin-top:12px">
+    固定坐标：<b>-Z Up</b> · 第一人称 Pitch ±45° · 轨道 Pitch ±55° · Roll 0°<br>手机漫游：左侧摇杆移动 · 右侧滑动视角 · ↑/↓ 升降<br>
+    快捷键：H 首页 · 1 轨道 · 2 漫游 · F 全屏 · P 项目 · Q 分享
+  </div>
+
+  <input id="fileInput" type="file" accept=".ply,.spz,.splat,.ksplat,.sog,.zip" hidden>
+</div>
+
+
+<div id="introOverlay">
+  <div id="introCard">
+    <div id="introBrand">
+      <div id="introBrandLogoBox">
+        <img id="introBrandLogo" src="assets/crcc_logo.png" alt="中国铁建 CRCC">
+      </div>
+      <div id="introBrandName">
+        <b>中国铁建 · CRCC</b>
+        数字化三维场景展示
+      </div>
+    </div>
+    <div id="introEyebrow">AGV · 3DGS · DIGITAL TWIN</div>
+    <h1 id="introTitle">AGV Metric<br>Gaussian Digital Twin</h1>
+    <div id="introCn">真实场景三维重建与数字孪生展示</div>
+    <div id="introDesc">
+      基于 3D Gaussian Splatting 的真实场景重建成果。
+      支持浏览器端实时查看、轨道浏览与第一人称漫游，
+      用于展示真实场景三维重建和数字孪生可视化结果。
+    </div>
+    <div id="introTags">
+      <span class="introTag">3D Gaussian Splatting</span>
+      <span class="introTag">Web Interactive Viewer</span>
+      <span class="introTag">First-person Navigation</span>
+      <span class="introTag">Digital Twin</span>
+    </div>
+    <div id="introActions">
+      <button id="enterSceneBtn" class="primaryBtn">进入场景</button>
+      <button id="introShareBtn" class="secondaryBtn">扫码分享</button>
+    </div>
+    <div id="introFoot">
+      推荐使用 Chrome / Edge 桌面浏览器。首次访问需要加载 3DGS 模型。
+    </div>
+  </div>
+</div>
+
+<div id="sharePanel" class="glass">
+  <div class="sectionTitle">分享此数字孪生场景</div>
+  <div class="meta">手机扫描二维码即可打开同一个公网 Viewer。</div>
+  <img id="shareQr" src="assets/agv_share_qr.png" alt="3DGS Viewer 分享二维码">
+  <div id="shareUrl">https://yuhengd83-cell.github.io/gaussian-digital-twin/agv-test.html?v=5.5.4.2</div>
+  <div class="shareActions">
+    <button id="copyLinkBtn" class="settingsBtn">复制链接</button>
+    <button id="closeShareBtn" class="settingsBtn">关闭</button>
+  </div>
+</div>
+
+<div id="drop" class="glass">
+  <h2>加载 Gaussian Splat</h2>
+  <p>支持 PLY / SPZ / SPLAT / KSPLAT / SOG</p>
+  <p>默认优先加载 models/splat.spz</p>
+  <div class="row">
+    <button id="dropOpenBtn" class="settingsBtn">选择本地模型</button>
+    <button id="dropCloseBtn" class="settingsBtn">关闭</button>
+  </div>
+</div>
+
+
+<div id="mobileControls">
+  <div id="mobileLookZone" aria-label="右侧滑动调整视角"></div>
+  <div id="joystickWrap" aria-label="虚拟移动摇杆">
+    <div id="joystickBase"></div>
+    <div id="joystickKnob"></div>
+  </div>
+  <div id="verticalBtns">
+    <button id="mobileUpBtn" class="mobileRoundBtn" type="button" aria-label="上升">↑</button>
+    <button id="mobileDownBtn" class="mobileRoundBtn" type="button" aria-label="下降">↓</button>
+  </div>
+  <div id="mobileLookHint">右侧滑动调整视角</div>
+</div>
+
+<div id="modeHint" class="glass">
+  <span id="modeHintText"><b>轨道模式</b> · 左键旋转 · 右键平移 · 滚轮缩放</span>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { SparkRenderer, SplatMesh, transcodeSpz } from "@sparkjsdev/spark";
+// v5.5.1: AGV tools embedded directly in this page to prevent a missing local
+// src/agv-route-editor.js request from preventing the entire viewer from booting.
+
+/* v5.5.4.2: world-space gradient TubeGeometry.
+ * WebGL LineBasicMaterial.linewidth is commonly ignored; use an actual mesh.
+ * Scene units/metre come from CAD pose where available, NOT from pixel width.
+ */
+const TRACK_GRADIENT_PALETTES = Object.freeze({
+  rainbow:{plan:[0x00dfff,0x237afa,0x9e59ff,0xff74ca,0xffc047],trail:[0x2afa92,0x37e9f6,0xf7e653,0xff705e]},
+  neon:{plan:[0x00f2ff,0x1d78ff,0x9b35ff],trail:[0x4bffbb,0x00c9f0,0xffdc6c]},
+  warm:{plan:[0xffdd56,0xff7e46,0xe64a84],trail:[0xfff06e,0xff9b29,0xfa386d]},
+  classic:{plan:[0x469fff,0x469fff],trail:[0x3ee0a8,0x3ee0a8]}
+});
+function createColoredTrackMesh(worldPoints,widthInWorldUnits,kind,palette){
+  if(!Array.isArray(worldPoints)||worldPoints.length<2)return null;
+  const clean=[];
+  for(const p of worldPoints){
+    if(!p || !Number.isFinite(p.x+p.y+p.z))continue;
+    if(!clean.length || clean[clean.length-1].distanceToSquared(p)>1e-12)clean.push(p);
+  }
+  if(clean.length<2)return null;
+  // Dynamic trails can contain thousands of samples; downsample only for draw.
+  const maxPoints=350;
+  let shown=clean;
+  if(clean.length>maxPoints){
+    shown=[];
+    const last=clean.length-1;
+    for(let i=0;i<maxPoints;i++)shown.push(clean[Math.round(i*last/(maxPoints-1))]);
+  }
+  const curve=new THREE.CurvePath();
+  for(let i=1;i<shown.length;i++){
+    if(shown[i].distanceToSquared(shown[i-1])>1e-12)
+      curve.add(new THREE.LineCurve3(shown[i-1],shown[i]));
+  }
+  if(!curve.curves.length)return null;
+  const tubeSegments=Math.min(850,Math.max(16,shown.length*3));
+  const radialSegments=6;
+  const geometry=new THREE.TubeGeometry(curve,tubeSegments,Math.max(widthInWorldUnits*0.5,0.000015),radialSegments,false);
+  const stops=(TRACK_GRADIENT_PALETTES[palette]||TRACK_GRADIENT_PALETTES.rainbow)[kind==='trail'?'trail':'plan'].map(c=>new THREE.Color(c));
+  const colors=new Float32Array((tubeSegments+1)*(radialSegments+1)*3);
+  const c=new THREE.Color();
+  for(let i=0;i<=tubeSegments;i++){
+    const at=(i/tubeSegments)*(stops.length-1);
+    const idx=Math.min(stops.length-2,Math.floor(at));
+    c.copy(stops[idx]).lerp(stops[idx+1],Math.min(1,at-idx));
+    for(let j=0;j<=radialSegments;j++){
+      const k=(i*(radialSegments+1)+j)*3;
+      colors[k]=c.r; colors[k+1]=c.g; colors[k+2]=c.b;
+    }
+  }
+  geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  const material=new THREE.MeshBasicMaterial({vertexColors:true,depthTest:false,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+  const mesh=new THREE.Mesh(geometry,material);
+  mesh.frustumCulled=false;
+  return mesh;
+}
+const traceAppearance=(()=>{
+  const defaults={palette:'rainbow',widthMeters:0.08};
+  let sceneId='startup',appearance={...defaults};
+  const listeners=new Set();
+  const valid=new Set(Object.keys(TRACK_GRADIENT_PALETTES));
+  const key=()=> 'agv-track-style-v5542:'+sceneId;
+  function syncControls(){
+    for(const suffix of ['Agv','Drive']){
+      const palette=document.getElementById('tracePalette'+suffix);
+      const width=document.getElementById('traceWidth'+suffix);
+      const display=document.getElementById('traceWidthValue'+suffix);
+      if(palette)palette.value=appearance.palette;
+      if(width)width.value=appearance.widthMeters.toFixed(2);
+      if(display)display.textContent=Math.round(appearance.widthMeters*100)+' cm';
+    }
+  }
+  function notifyListeners(){syncControls();for(const f of listeners)f();}
+  function normalized(p){
+    const w=Number(p?.widthMeters);
+    return {palette:valid.has(p?.palette)?p.palette:defaults.palette,
+            widthMeters:Number.isFinite(w)?Math.max(.02,Math.min(.20,w)):defaults.widthMeters};
+  }
+  function change(partial){
+    appearance=normalized({...appearance,...partial});
+    try{localStorage.setItem(key(),JSON.stringify(appearance));}catch(_){}
+    notifyListeners();
+  }
+  function loadScene(id){
+    sceneId=String(id||'unknown'); appearance={...defaults};
+    try{const raw=localStorage.getItem(key());if(raw)appearance=normalized(JSON.parse(raw));}catch(_){}
+    notifyListeners();
+  }
+  for(const suffix of ['Agv','Drive']){
+    document.getElementById('tracePalette'+suffix)?.addEventListener('change',e=>change({palette:e.target.value}));
+    document.getElementById('traceWidth'+suffix)?.addEventListener('input',e=>change({widthMeters:Number(e.target.value)}));
+  }
+  syncControls();
+  return {get:()=>({...appearance}),subscribe:fn=>{listeners.add(fn);return ()=>listeners.delete(fn);},loadScene};
+})();
+
+/* AGV trajectory editor, v5.5 Stage 1.
+ * All coordinates are in Three.js Viewer WORLD units, not ROS meters.
+ * The picked ground is a manually adjustable visual XY plane (Up = -Z).
+ * No ROS alignment, navigation planning, or collision guarantee is implied.
+ */
+// Pure functions also used by the v5.5 regression tests.
+function routeLengthViewerUnits(points) {
+  let length=0;
+  for(let i=1;i<points.length;i++) {
+    const a=points[i-1],b=points[i];
+    length+=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+  }
+  return length;
+}
+function estimateMetersPerViewerUnit(a,b,meters) {
+  const distance=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+  if(!Number.isFinite(meters)||meters<=0||!Number.isFinite(distance)||distance<=1e-8) return null;
+  return meters/distance;
+}
+
+function createAgvRouteEditor({ THREE, scene, camera, canvas, orbit, getViewMode, switchToOrbit, notify }) {
+  const $ = (id) => document.getElementById(id);
+  const panel = $('agvPanel');
+  const modeButton = $('agvBtn');
+  const placeButton = $('agvPlaceBtn');
+  const gridButton = $('agvGridBtn');
+  const groundInput = $('agvGroundZ');
+  const knownDistanceInput = $('agvKnownMeters');
+  const stateLabel = $('agvState');
+  const lengthLabel = $('agvLength');
+  const routeList = $('agvRouteList');
+  const modelLabel = $('agvModelName');
+
+  const routeGroup = new THREE.Group();
+  routeGroup.name = 'AGV_v55_route_overlay';
+  scene.add(routeGroup);
+  const guideGroup = new THREE.Group();
+  guideGroup.name = 'AGV_v55_ground_reference';
+  scene.add(guideGroup);
+
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+  const hit = new THREE.Vector3();
+
+  let modelId = null;
+  let route = [];
+  let groundZ = 0;
+  let sceneSpan = 2;
+  let boundsCenter = new THREE.Vector3();
+  let metersPerUnit = null;
+  let knownDistanceMeters = null;
+  let groundSource = 'estimated';
+  let placing = false;
+  let showGrid = false;
+  let dynamicLine = null;
+  let dynamicMarkers = [];
+  let helperGrid = null;
+  let helperAxes = null;
+  let modelReady = false;
+
+  function isFinite3(p) {
+    return Array.isArray(p) && p.length === 3 && p.every(Number.isFinite);
+  }
+  function modelKey() {
+    return 'agv-v55-draft:' + modelId;
+  }
+  function lengthInUnits() {
+    return routeLengthViewerUnits(route);
+  }
+  function toRouteDoc() {
+    return {
+      schema: 'agv-paths-v1',
+      sceneModelId: modelId,
+      coordinateFrame: 'viewer_world',
+      isSimulationOnly: true,
+      groundPlaneApproximate: true,
+      waypoints: route.map((p,i) => ({ name:'P'+(i+1), viewer:[p.x,p.y,p.z] })),
+      totalLengthViewerUnits: Number(lengthInUnits().toFixed(7))
+    };
+  }
+  function toCalibrationDoc() {
+    return {
+      schema: 'agv-calibration-v1',
+      sceneModelId: modelId,
+      viewerUp: [0,0,-1],
+      groundPlane: { normal: [0,0,-1], z: groundZ, source: groundSource, verified: false },
+      metersPerViewerUnit: metersPerUnit,
+      referenceDistanceMeters: knownDistanceMeters,
+      rosMapToViewer: null,
+      status: metersPerUnit ? 'scale_only_unverified' : 'uncalibrated',
+      warning: 'Visual ground is approximate. ROS map registration and metric geometry are NOT verified.'
+    };
+  }
+  function persist() {
+    if (!modelId) return;
+    try {
+      localStorage.setItem(modelKey(), JSON.stringify({route:toRouteDoc(),calibration:toCalibrationDoc()}));
+    } catch (err) { console.warn('AGV localStorage failed',err); }
+  }
+  function downloadJSON(obj, filename) {
+    const blob = new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(href),3000);
+  }
+  function setInfo(message) {
+    stateLabel.textContent = message;
+  }
+  function updateInfo() {
+    modelLabel.textContent = modelId ? modelId.replace(/^url:/,'') : '(none)';
+    groundInput.value = Number(groundZ).toFixed(4);
+    knownDistanceInput.value = knownDistanceMeters != null ? knownDistanceMeters : '';
+    const u = lengthInUnits();
+    const suffix = metersPerUnit ? (' / approx. '+(u*metersPerUnit).toFixed(3)+' m (scale only)') : ' (not metric calibrated)';
+    lengthLabel.textContent = route.length + ' points, ' + u.toFixed(4) + ' viewer units' + suffix;
+    placeButton.textContent = placing ? '\u505c\u6b62\u5e03\u70b9' : '\u5f00\u59cb\u5e03\u70b9';
+    placeButton.classList.toggle('active',placing);
+    gridButton.classList.toggle('active',showGrid);
+    routeList.replaceChildren();
+    route.forEach((p,i)=>{
+      const li=document.createElement('li');
+      li.textContent='P'+(i+1)+' : '+[p.x,p.y,p.z].map(n=>n.toFixed(3)).join(', ');
+      routeList.append(li);
+    });
+    $('agvScaleStatus').textContent = metersPerUnit
+      ? ('\u5df2\u505a\u5355\u6bb5\u5c3a\u5ea6\u4f30\u8ba1\uff1a1u = '+metersPerUnit.toFixed(5)+'m\uff0c\u672a\u5b8c\u6210 ROS \u914d\u51c6')
+      : '\u672a\u6807\u5b9a\u771f\u5b9e\u5c3a\u5ea6\uff1b\u6570\u503c\u5355\u4f4d\u662f Viewer \u5750\u6807\u5355\u4f4d';
+  }
+  function disposeObject(object) {
+    if (!object) return;
+    object.parent?.remove(object);
+    object.geometry?.dispose();
+    if (Array.isArray(object.material)) object.material.forEach(m=>m.dispose?.());
+    else object.material?.dispose?.();
+  }
+  function renderRoute() {
+    if(dynamicLine)disposeObject(dynamicLine);
+    dynamicLine=null;
+    dynamicMarkers.forEach(disposeObject);
+    dynamicMarkers=[];
+    const markerRadius=Math.max(.003,Math.min(.08,sceneSpan*.012));
+    const pointHeight=Math.max(.001,sceneSpan*.003);
+    for(let i=0;i<route.length;i++){
+      const p=route[i];
+      const sphere=new THREE.Mesh(
+        new THREE.SphereGeometry(markerRadius,12,10),
+        new THREE.MeshBasicMaterial({color:i===0?0x50e5a7:0xffcf6d,depthTest:false,depthWrite:false})
+      );
+      sphere.position.set(p.x,p.y,p.z-pointHeight);
+      sphere.renderOrder=150;
+      sphere.name='AGV_waypoint_'+(i+1);
+      routeGroup.add(sphere);
+      dynamicMarkers.push(sphere);
+    }
+    if(route.length>1){
+      const pts=route.map(p=>new THREE.Vector3(p.x,p.y,p.z-pointHeight));
+      // Prefer the displayed CAD scale if loaded; otherwise use calibration
+      // or a visual fallback. Thickness is not a collision/safety corridor.
+      const fromCad=Number(document.getElementById('ackermannScale')?.value);
+      const unitsPerMeter=Number.isFinite(fromCad)&&fromCad>0?fromCad:
+        (metersPerUnit>0?1/metersPerUnit:Math.max(sceneSpan*.05,0.004));
+      const appearance=traceAppearance.get();
+      dynamicLine=createColoredTrackMesh(pts,appearance.widthMeters*unitsPerMeter,'plan',appearance.palette);
+      if(dynamicLine){
+        dynamicLine.renderOrder=149;
+        dynamicLine.name='AGV_gradient_route';
+        routeGroup.add(dynamicLine);
+      }
+    }
+    updateInfo();
+  }
+  function renderGuides() {
+    if(helperGrid)disposeObject(helperGrid);
+    if(helperAxes)disposeObject(helperAxes);
+    helperGrid=null;helperAxes=null;
+    if(!showGrid || !modelReady)return;
+    const size = Math.max(.2,sceneSpan*1.1);
+    helperGrid=new THREE.GridHelper(size,20,0x7199c4,0x4e667c);
+    helperGrid.rotation.x=Math.PI/2; // XZ plane to XY plane.
+    helperGrid.position.copy(boundsCenter);
+    helperGrid.position.z=groundZ;
+    helperGrid.material.transparent=true;
+    helperGrid.material.opacity=.55;
+    helperGrid.material.depthTest=false;
+    helperGrid.material.depthWrite=false;
+    helperGrid.renderOrder=145;
+    guideGroup.add(helperGrid);
+    helperAxes=new THREE.AxesHelper(Math.max(.1,sceneSpan*.15));
+    helperAxes.position.copy(boundsCenter);
+    helperAxes.position.z=groundZ;
+    helperAxes.renderOrder=145;
+    helperAxes.material.depthTest=false;
+    guideGroup.add(helperAxes);
+  }
+  function stopPlacement() {
+    placing=false;
+    orbit.enabled=getViewMode()==='orbit';
+    canvas.style.cursor='';
+    updateInfo();
+  }
+  function startPlacement() {
+    if (!modelReady) {
+      setInfo('\u8bf7\u5148\u52a0\u8f7d\u6a21\u578b');
+      return;
+    }
+    if (getViewMode()!=='orbit') switchToOrbit();
+    placing=true;
+    orbit.enabled=false;
+    canvas.style.cursor='crosshair';
+    setInfo('\u5e03\u70b9\u4e2d\uff1a\u5355\u51fb\u573a\u666f\u6dfb\u52a0\u8def\u70b9\uff0cEsc \u9000\u51fa\uff1b\u6b64\u4e3a\u4f30\u7b97\u5e73\u9762');
+    updateInfo();
+  }
+  function onCanvasPointer(e) {
+    if(!placing || !modelReady)return;
+    // Prevent OrbitControls pointer handling and desktop first-person lock.
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if(e.button!==0 && e.pointerType==='mouse')return;
+    const rect=canvas.getBoundingClientRect();
+    mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+    mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    plane.set(new THREE.Vector3(0,0,1),-groundZ);
+    if(!raycaster.ray.intersectPlane(plane,hit)) {
+      setInfo('\u672a\u4e0e\u53c2\u8003\u5730\u9762\u76f8\u4ea4\uff0c\u8bf7\u5207\u6362\u89c6\u89d2');
+      return;
+    }
+    const maxDistance=Math.max(1,sceneSpan*25);
+    if(hit.distanceTo(camera.position)>maxDistance){
+      setInfo('\u70b9\u8fc7\u8fdc\uff0c\u8bf7\u8c03\u6574\u89c6\u89d2\u518d\u5e03\u70b9');
+      return;
+    }
+    if(route.length >= 100){
+      setInfo('\u5355\u6761\u6f14\u793a\u8def\u5f84\u6700\u591a100\u4e2a\u70b9');
+      return;
+    }
+    route.push(hit.clone());
+    renderRoute();
+    persist();
+    setInfo('\u5df2\u6dfb\u52a0 P'+route.length+'\uff0c\u4ec5\u662f\u53ef\u89c6\u5316\u8def\u5f84\uff0c\u5c1a\u4e0d\u4ee3\u8868\u771f\u5b9e\u53ef\u884c\u9a76\u533a\u57df');
+  }
+  canvas.addEventListener('pointerdown',onCanvasPointer,true);
+  addEventListener('keydown',(e)=>{
+    if(e.key==='Escape' && placing) stopPlacement();
+  });
+
+  function applyDraft(loaded) {
+    route=[];
+    metersPerUnit=null;
+    knownDistanceMeters=null;
+    groundSource='estimated';
+    if(!loaded || typeof loaded!=='object')return;
+    const d=loaded.route||loaded;
+    const c=loaded.calibration||{};
+    const points=d.waypoints;
+    if(Array.isArray(points) && points.length<=100){
+      route=points.map(p=>p.viewer).filter(isFinite3).map(p=>new THREE.Vector3(...p));
+    }
+    if(Number.isFinite(c.metersPerViewerUnit) && c.metersPerViewerUnit>0){
+      metersPerUnit=c.metersPerViewerUnit;
+    }
+    if(Number.isFinite(c.referenceDistanceMeters) && c.referenceDistanceMeters>0){
+      knownDistanceMeters=c.referenceDistanceMeters;
+    }
+    if(Number.isFinite(c.groundPlane?.z)){
+      groundZ=c.groundPlane.z;
+      groundSource=c.groundPlane.source==='manual'?'manual':'estimated';
+    }
+  }
+  async function loadDefaultData(id) {
+    let data=null;
+    try{
+      const c=await fetch('config/calibration.json',{cache:'no-cache'});
+      const p=await fetch('data/paths.json',{cache:'no-cache'});
+      if(c.ok && p.ok){
+        const calibration=await c.json();
+        const routeDoc=await p.json();
+        if(calibration.sceneModelId===id && routeDoc.sceneModelId===id){
+          data={calibration,route:routeDoc};
+        }
+      }
+    }catch(_){ /* Optional files. */ }
+    try{
+      const raw=localStorage.getItem(modelKey());
+      if(raw)data=JSON.parse(raw);
+    }catch(_){ /* ignore malformed draft */ }
+    applyDraft(data);
+    renderRoute();
+    renderGuides();
+    setInfo(data?'\u5df2\u6062\u590d\u573a\u666f\u8def\u5f84\u8349\u7a3f':'\u65b0\u573a\u666f\uff1a\u5c1a\u672a\u6dfb\u52a0\u8def\u70b9');
+  }
+  let modelEpoch=0;
+  async function onModelLoaded(id,boundsPromise) {
+    stopPlacement();
+    modelEpoch++;
+    const epoch=modelEpoch;
+    modelId=id;
+    modelReady=true;
+    route=[];
+    traceAppearance.loadScene(id);
+    metersPerUnit=null;
+    knownDistanceMeters=null;
+    groundZ=0;
+    boundsCenter.set(0,0,0);
+    await loadDefaultData(id);
+    try{
+      const box=await boundsPromise;
+      if(epoch!==modelEpoch || !box || box.isEmpty())return;
+      const size=box.getSize(new THREE.Vector3());
+      sceneSpan=Math.max(size.x,size.y,size.z,.1);
+      boundsCenter=box.getCenter(new THREE.Vector3());
+      // -Z means the positive Z extreme is the approximate floor.
+      if(!route.length && groundSource==='estimated') groundZ=box.max.z;
+      if(route.length && groundSource==='estimated') groundZ=route[0].z;
+      renderGuides();
+      renderRoute();
+      setInfo('\u53c2\u8003\u5730\u9762\u4e3a\u4f30\u7b97\u503c\uff1b\u8bf7\u68c0\u67e5\u7f51\u683c\u4f4d\u7f6e\u518d\u5e03\u70b9');
+    }catch(err){
+      console.warn('AGV ground estimate unavailable',err);
+      setInfo('\u672a\u80fd\u4f30\u7b97\u5730\u9762\uff0c\u8bf7\u624b\u52a8\u8f93\u5165 Z');
+    }
+  }
+  function setPanelOpen(value) {
+    const open=Boolean(value);
+    panel.classList.toggle('open',open);
+    modeButton.classList.toggle('active',open);
+    if(!open)stopPlacement();
+  }
+
+  modeButton.addEventListener('click',()=>{window.dispatchEvent(new Event('ackermann-editor-open'));document.getElementById('drivePanel')?.classList.remove('open');document.getElementById('driveBtn')?.classList.remove('active');document.getElementById('modelSwitchPanel')?.classList.remove('open');document.getElementById('modelSwitchBtn')?.classList.remove('active');document.getElementById('ackermannPanel')?.classList.remove('open');document.getElementById('ackermannBtn')?.classList.remove('active');setPanelOpen(!panel.classList.contains('open'));});
+  $('agvCloseBtn').addEventListener('click',()=>setPanelOpen(false));
+  placeButton.addEventListener('click',()=>placing?stopPlacement():startPlacement());
+  gridButton.addEventListener('click',()=>{
+    showGrid=!showGrid;
+    renderGuides();
+    updateInfo();
+  });
+  groundInput.addEventListener('change',()=>{
+    const n=Number(groundInput.value);
+    if(!Number.isFinite(n) || Math.abs(n)>1e7){updateInfo();return;}
+    const delta=n-groundZ;
+    groundZ=n;
+    groundSource='manual';
+    route.forEach(p=>p.z+=delta);
+    renderGuides();renderRoute();persist();
+    setInfo('\u5730\u9762\u9ad8\u5ea6\u5df2\u8c03\u6574\uff0c\u4f46\u5c1a\u672a\u7ecf\u6d4b\u91cf\u9a8c\u8bc1');
+  });
+  $('agvUndoBtn').addEventListener('click',()=>{
+    if(route.length){route.pop();renderRoute();persist();}
+  });
+  $('agvClearBtn').addEventListener('click',()=>{
+    if(!route.length)return;
+    if(!confirm('\u6e05\u9664\u8fd9\u6761\u6d4b\u8bd5\u8def\u7ebf\u7684\u6240\u6709\u8def\u70b9\uff1f'))return;
+    route=[];metersPerUnit=null;knownDistanceMeters=null;
+    renderRoute();persist();
+  });
+  $('agvScaleBtn').addEventListener('click',()=>{
+    if(route.length<2){setInfo('\u8bf7\u5148\u5e03\u7f6e\u81f3\u5c11\u4e24\u4e2a\u8def\u70b9');return;}
+    const meters=Number(knownDistanceInput.value);
+    const scale=estimateMetersPerViewerUnit(route[0],route[1],meters);
+    if(scale===null){
+      setInfo('\u8bf7\u8f93\u5165\u6b63\u786e\u7684\u5b9e\u6d4b\u8ddd\u79bb\uff0c\u4e14\u4e24\u70b9\u4e0d\u80fd\u91cd\u5408');return;
+    }
+    knownDistanceMeters=meters;
+    metersPerUnit=scale;
+    persist();updateInfo();
+    setInfo('\u4ec5\u5b8c\u6210\u4e24\u70b9\u5355\u6bb5\u6bd4\u4f8b\u5c3a\u5ea6\u4f30\u8ba1\uff0c\u672a\u5b8c\u6210 ROS \u5bf9\u9f50');
+  });
+  $('agvSaveBtn').addEventListener('click',()=>{
+    persist();notify('\u8def\u7ebf\u8349\u7a3f\u5df2\u4fdd\u5b58\u5728\u8fd9\u53f0\u6d4f\u89c8\u5668');
+  });
+  $('agvExportBtn').addEventListener('click',()=>{
+    downloadJSON(toRouteDoc(),'paths.json');
+    downloadJSON(toCalibrationDoc(),'calibration.json');
+    notify('\u5df2\u5bfc\u51fa\u8def\u7ebf\u4e0e\u6807\u5b9a\u8349\u7a3f\uff08\u4e24\u4e2a JSON\uff09');
+  });
+  traceAppearance.subscribe(()=>renderRoute());
+  setPanelOpen(false);
+  updateInfo();
+  return {
+    onModelLoading:()=>{modelReady=false;stopPlacement();route=[];renderRoute();setInfo('Loading model...');},
+    onModelLoaded,
+    onViewModeChanged:()=>{
+      if(getViewMode()!=='orbit' && placing)stopPlacement();
+    },
+    setPanelOpen,
+    getDiagnostics:()=>({modelId,modelReady,waypoints:route.length,groundZ,metersPerUnit,placing}),
+    getWaypoints:()=>route.map(p=>({x:p.x,y:p.y,z:p.z}))
+  };
+}
+
+
+const $=id=>document.getElementById(id);
+const REPORT_TITLE="AGV Metric Gaussian Digital Twin";
+const REPORT_SUBTITLE="真实场景三维重建与数字孪生展示";
+const PUBLIC_URL="https://yuhengd83-cell.github.io/gaussian-digital-twin/agv-test.html?v=5.5.4.2";
+
+const canvas=$("viewer"),statusEl=$("status"),statsEl=$("stats"),errorEl=$("error");
+const dropEl=$("drop"),progressWrap=$("progressWrap"),crosshair=$("crosshair"),settingsEl=$("settings");
+const loadingOverlay=$("loadingOverlay");
+const loadingStage=$("loadingStage");
+const loadingPercent=$("loadingPercent");
+const loadingBar=$("loadingBar");
+const loadingBytes=$("loadingBytes");
+const joystickWrap=$("joystickWrap");
+const joystickKnob=$("joystickKnob");
+const mobileLookZone=$("mobileLookZone");
+const IS_TOUCH=(navigator.maxTouchPoints||0)>0 || matchMedia("(pointer: coarse)").matches;
+
+
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:"high-performance"});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight,false);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0f1115);
+
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.01,10000);
+camera.position.set(0,0,2);
+
+// 你的 office2 已经实测：-Z 才是真正的“向上”
+const SCENE_UP=new THREE.Vector3(0,0,-1);
+camera.up.copy(SCENE_UP);
+
+const spark=new SparkRenderer({renderer});
+scene.add(spark);
+
+const orbit=new OrbitControls(camera,renderer.domElement);
+orbit.enableDamping=true;
+orbit.dampingFactor=.08;
+orbit.screenSpacePanning=true;
+
+// 轨道模式：限制为地平线上下 ±75°，禁止翻转。
+// OrbitControls 的 polar angle: 0=向上，90°=水平，180°=向下。
+orbit.minPolarAngle=THREE.MathUtils.degToRad(35);
+orbit.maxPolarAngle=THREE.MathUtils.degToRad(145);
+
+let mode="orbit";
+
+const ackermannCad=createAckermannCadOverlay({
+  THREE,scene,camera,canvas,orbit,
+  getViewMode:()=>mode,
+  enterOrbitMode:()=>enterOrbit(),
+  getRouteDiagnostics:()=>agvEditor.getDiagnostics(),
+  notify:msg=>toast(msg)
+});
+
+let currentModel=null,currentId="",currentBytes=null,currentFile=null,currentUrl=null;
+let sceneRadius=2,autoView=null,loading=false,permanentConfig=null;
+
+let activeSceneSpec=null;
+let sceneCatalog=[];
+let activeModelLabel='--';
+const MODEL_HINTS=Object.freeze({
+  unavailable: "\u6a21\u578b\u6587\u4ef6\u4e0d\u5b58\u5728\uff0c\u8bf7\u5148\u653e\u5165 models \u6587\u4ef6\u5939\u6216\u4f7f\u7528\u672c\u5730\u6587\u4ef6\u9009\u62e9\u3002",
+  unsupported: "\u4e0d\u652f\u6301\u76f4\u63a5\u52a0\u8f7d ckpt \u8bad\u7ec3\u68c0\u67e5\u70b9\uff1b\u8bf7\u4ece\u8bad\u7ec3\u7ed3\u679c\u5bfc\u51fa Gaussian PLY \u6216 SPZ\u3002",
+  test: "\u6a21\u578b\u5207\u6362\u540e\u8bf7\u5148\u9a8c\u8bc1\u573a\u666f\u65b9\u5411\u3001\u53c2\u8003\u5730\u9762\u548c\u5c3a\u5ea6\u3002"
+});
+const SUPPORTED_MODEL_EXT=/\.(ply|spz|splat|ksplat|sog)$/i;
+const modelSwitchPanel=$('modelSwitchPanel');
+const modelSceneSelect=$('modelSceneSelect');
+const modelSwitchInfo=$('modelSwitchInfo');
+
+function setModelSwitchInfo(message){modelSwitchInfo.textContent=message;}
+function showActiveModel(name){
+ activeModelLabel=name||'--';
+ $('activeModelTag').textContent=activeModelLabel;
+}
+function setModelPanelOpen(value){
+ const open=Boolean(value);
+ if(open && driveSim?.isActive())driveSim.stopDrive();
+ modelSwitchPanel.classList.toggle('open',open);
+ $('modelSwitchBtn').classList.toggle('active',open);
+ if(open){settingsEl.classList.remove('open');$('settingsBtn').classList.remove('active');agvEditor.setPanelOpen(false);ackermannCad.setPanelOpen(false);}
+}
+function validateSceneEntry(entry){
+ if(!entry || typeof entry!=='object'||typeof entry.id!=='string'||!entry.id.trim() ||
+    typeof entry.url!=='string'||!entry.url.trim()||typeof entry.name!=='string')return false;
+ // Only relative URLs inside this deployment: no protocol, absolute path, query or traversal.
+ if(!/^models\/[a-zA-Z0-9_./-]+\.(ply|spz|splat|ksplat|sog)$/i.test(entry.url)||entry.url.includes('..'))return false;
+ return true;
+}
+async function loadSceneCatalog(){
+ try{
+  const res=await fetch('config/scenes.json',{cache:'no-store'});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const doc=await res.json();
+  sceneCatalog=Array.isArray(doc.models)?doc.models.filter(validateSceneEntry):[];
+  modelSceneSelect.replaceChildren();
+  for(const entry of sceneCatalog){
+    const opt=document.createElement('option');
+    opt.value=entry.id;
+    opt.textContent=entry.name;
+    modelSceneSelect.appendChild(opt);
+  }
+  if(doc.defaultModel && sceneCatalog.some(v=>v.id===doc.defaultModel))modelSceneSelect.value=doc.defaultModel;
+  setModelSwitchInfo('Scene catalog: '+sceneCatalog.length+' model(s)');
+  return sceneCatalog.find(x=>x.id===doc.defaultModel)||sceneCatalog[0]||null;
+ }catch(err){
+  console.warn('Scene catalog not available',err);
+  setModelSwitchInfo('Scene catalog unavailable. You can still choose a local PLY/SPZ.');
+  return null;
+ }
+}
+async function switchToScene(entry){
+ if(!entry||loading)return;
+ if(currentModel && currentId==='scene:'+entry.id){
+   setModelSwitchInfo('This scene is already loaded.');
+   return;
+ }
+ if(mode==='fps')enterOrbit();
+ if(!(await urlExists(entry.url))){
+  setModelSwitchInfo(MODEL_HINTS.unavailable+'\n'+entry.url);
+  return;
+ }
+ setModelSwitchInfo('Loading: '+entry.name);
+ setModelPanelOpen(false);
+ try{
+  const ok=await loadUrl(entry.url,entry);
+  if(ok){
+    showActiveModel(entry.name);
+    if(entry.unverifiedUp!==false)setStatus(MODEL_HINTS.test);
+  }
+ }catch(err){
+  console.error('Scene switching failed',err);
+  setModelSwitchInfo(String(err?.message||err));
+ }
+}
+
+// v5.5.3 - Detailed SolidWorks Ackermann model overlay.
+// Geometry stays in CAD metres. A per-3DGS-scene uniform scale maps metres to Viewer units.
+// glTF (X forward, Y up) is rotated around X by -90deg to Viewer (-Z up).
+// The robot visual geometry joins the same Three scene as Spark; it is not a collision or navigation model.
+function createAckermannCadOverlay({THREE, scene, camera, canvas, orbit,
+                                    getViewMode, enterOrbitMode,
+                                    getRouteDiagnostics, notify}) {
+  const $=id=>document.getElementById(id);
+  const panel=$('ackermannPanel');
+  const button=$('ackermannBtn');
+  const statusEl=$('ackermannState');
+  const scaleStatusEl=$('ackermannScaleStatus');
+  const sourceStatusEl=$('ackermannSourceStatus');
+  const scaleEl=$('ackermannUnitsPerMeter');
+  const floorEl=$('ackermannGroundZ');
+  const xEl=$('ackermannX');
+  const yEl=$('ackermannY');
+  const yawEl=$('ackermannYaw');
+  const visibleEl=$('ackermannVisible');
+
+  const vehicleScene=scene; // Directly in the existing Three/Spark scene, one render pass.
+  vehicleScene.add(new THREE.HemisphereLight(0xf4f8ff,0x35445a,3.0));
+  const light1=new THREE.DirectionalLight(0xffffff,2.0);
+  light1.position.set(-3,-5,-7);vehicleScene.add(light1);
+  const light2=new THREE.DirectionalLight(0x95bbff,0.9);
+  light2.position.set(2,2,-4);vehicleScene.add(light2);
+
+  const vehiclePose=new THREE.Group();
+  vehiclePose.name='Ackermann_base_link_in_Viewer';
+  const glbAxisFix=new THREE.Group();
+  glbAxisFix.name='glTF_Y_Up_to_Viewer_minus_Z_Up';
+  glbAxisFix.rotation.x=-Math.PI/2;
+  vehiclePose.add(glbAxisFix);
+  vehicleScene.add(vehiclePose);
+
+  // Based on the actual detailed SolidWorks URDF + all ten STL meshes.
+  const METRIC=Object.freeze({
+    length:1.413,width:.768,height:1.153584,frontAxle:.802603,
+    frontTrack:.688,wheelDiameter:.404,wheelContactHeight:.202000007,
+    linkCount:10,meshUrl:'assets/ackermann/ackermann_urdf_meters.glb',
+    source:'8.6urdf_18.11/urdf/8.6urdf_18.11.urdf'
+  });
+  let loaded=false;
+  let loadPromise=null;
+  let sceneModelId=null;
+  let sceneEpoch=0;
+  let sceneReady=false;
+  let placing=false;
+  let currentBoundsCenter=new THREE.Vector3();
+  let currentFloor=0;
+  let sceneSpan=2;
+  let lastLoadError=null;
+  const wheelRigs={};
+  let odometerRotation=0;
+  let pose={x:0,y:0,groundZ:0,yawDeg:0,viewerUnitsPerMeter:1,
+            scaleSource:'unverified_preview',visible:true};
+  const raycaster=new THREE.Raycaster();
+  const mouse=new THREE.Vector2();
+  const groundPlane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
+  const hit=new THREE.Vector3();
+
+  function showStatus(msg){statusEl.textContent=msg;}
+  function sceneSaveKey(){return 'ackermann-cad-v1:'+sceneModelId;}
+  function sceneConfigName(){
+    const id=(sceneModelId||'unknown').replace(/^scene:/,'').replace(/[^a-zA-Z0-9_-]/g,'_');
+    return 'ackermann_placement_'+id+'.json';
+  }
+  function validPositive(v){return Number.isFinite(v)&&v>0&&v<10000;}
+  function readPoseFromInputs(){
+    const x=Number(xEl.value), y=Number(yEl.value), z=Number(floorEl.value);
+    const upm=Number(scaleEl.value), yaw=Number(yawEl.value);
+    if (![x,y,z,yaw].every(Number.isFinite) ||
+        [x,y,z].some(v=>Math.abs(v)>1e7) ||
+        !validPositive(upm) || upm<.0001 || Math.abs(yaw)>1e5) {
+      showStatus('参数无效：请输入有限坐标、合理的朝向及大于 0 的 Viewer 单位/米。');
+      return false;
+    }
+    pose={...pose,x,y,groundZ:z,yawDeg:yaw,viewerUnitsPerMeter:upm,visible:visibleEl.checked};
+    return true;
+  }
+  function positionVehicle(){
+    const upm=pose.viewerUnitsPerMeter;
+    vehiclePose.scale.setScalar(upm);
+    vehiclePose.position.set(pose.x,pose.y,pose.groundZ-METRIC.wheelContactHeight*upm);
+    vehiclePose.rotation.z=-THREE.MathUtils.degToRad(pose.yawDeg);
+    vehiclePose.visible=loaded&&sceneReady&&pose.visible;
+    // Translation: CAD root is wheel-axle height, not the road surface.
+    // Contact point is at z=groundZ after compensating for the tyre radius.
+  }
+  function writeInputs(){
+    xEl.value=Number(pose.x.toFixed(5));
+    yEl.value=Number(pose.y.toFixed(5));
+    floorEl.value=Number(pose.groundZ.toFixed(5));
+    yawEl.value=Number(pose.yawDeg.toFixed(2));
+    scaleEl.value=Number(pose.viewerUnitsPerMeter.toPrecision(7));
+    visibleEl.checked=pose.visible;
+    scaleStatusEl.textContent=pose.scaleSource==='from_route_pair'
+       ? '采用 AGV 路线 P1–P2 的单段实测尺度估计；尚未通过多控制点和 ROS map 验证。'
+       : pose.scaleSource==='manual_unverified'
+         ? '手动输入的 Viewer 单位/米；未核对实物控制点，暂不可作为精确尺寸配准结果。'
+         : '未实物标定：现用视觉预览比例，只用于显示；绝不代表真实米制尺度。';
+    sourceStatusEl.textContent=sceneModelId?'当前场景：'+sceneModelId+'；模型：SolidWorks 详细 URDF（10 部件）':'尚未加载 3DGS 场景';
+  }
+  function persistPose(){
+    if(!sceneModelId)return;
+    try{localStorage.setItem(sceneSaveKey(),JSON.stringify({sceneModelId,pose}));}
+    catch(err){console.warn('Cannot store per-scene Ackermann pose',err);}
+  }
+  function setPose(newPose,{persist=true}={}){
+    pose={...pose,...newPose};
+    writeInputs();positionVehicle();
+    if(persist)persistPose();
+  }
+  async function getPerSceneSavedPose(modelId){
+    try{
+      const raw=localStorage.getItem('ackermann-cad-v1:'+modelId);
+      if(raw){
+        const doc=JSON.parse(raw);
+        if(doc?.sceneModelId===modelId&&doc?.pose&&validPositive(doc.pose.viewerUnitsPerMeter))return doc.pose;
+      }
+    }catch(err){console.warn('Ignored invalid local vehicle draft',err);}
+    // Portable configuration can be placed in config/ with exactly the exported filename.
+    const id=modelId.replace(/^scene:/,'').replace(/[^a-zA-Z0-9_-]/g,'_');
+    try{
+      const r=await fetch('config/ackermann_placement_'+id+'.json',{cache:'no-store'});
+      if(r.ok){
+        const doc=await r.json();
+        if(doc?.sceneModelId===modelId&&doc?.pose&&validPositive(doc.pose.viewerUnitsPerMeter))return doc.pose;
+      }
+    }catch(_){ /* optional */ }
+    return null;
+  }
+
+  // Three.js GLTFLoader retains original 4 wheel link nodes, with centres in their parent transforms.
+  // Create real pivots in GLB Y-up: steering around +Y, rolling around +Z.
+  // The existing glbAxisFix maps +Y (GLB) to -Z (Viewer); do NOT mirror the CAD.
+  function attachWheelRig(gltfRoot,name){
+    const mesh=gltfRoot.getObjectByName(name);
+    if(!mesh?.parent)throw new Error('Missing CAD wheel node: '+name);
+    const parent=mesh.parent;
+    const originalPosition=mesh.position.clone();
+    parent.remove(mesh);
+    const steerPivot=new THREE.Group();
+    steerPivot.name=name+'_steer_pivot';
+    steerPivot.position.copy(originalPosition);
+    parent.add(steerPivot);
+    const spinPivot=new THREE.Group();
+    spinPivot.name=name+'_roll_pivot';
+    steerPivot.add(spinPivot);
+    mesh.position.set(0,0,0);
+    spinPivot.add(mesh);
+    wheelRigs[name]={steer:steerPivot,spin:spinPivot};
+  }
+  function setWheelAnimation(centreSteerRad,incrementMeters){
+    // Centre steering angle -> left/right mechanical wheel angles (bicycle -> Ackermann).
+    const a=ackermannWheelAngles(centreSteerRad,METRIC.frontAxle,METRIC.frontTrack);
+    if(wheelRigs.front_left_wheel_link)wheelRigs.front_left_wheel_link.steer.rotation.y=a.left;
+    if(wheelRigs.front_right_wheel_link)wheelRigs.front_right_wheel_link.steer.rotation.y=a.right;
+    if(Number.isFinite(incrementMeters)){
+      odometerRotation+=incrementMeters/(METRIC.wheelDiameter/2);
+      if(Math.abs(odometerRotation)>1e4)odometerRotation %= Math.PI*2;
+    }
+    for(const wheel of Object.values(wheelRigs))wheel.spin.rotation.z=odometerRotation;
+  }
+  function setDrivePose(newPose){
+    if(!sceneReady||!loaded)return;
+    // No implicit persist: driving must not overwrite a manually calibrated start pose.
+    pose={...pose,...newPose};
+    positionVehicle();writeInputs();
+  }
+  function importDrivePlacement(doc){
+    if(!sceneReady||!sceneModelId)throw new Error('请先加载模型');
+    if(doc?.sceneModelId!==sceneModelId)throw new Error('JSON 的 sceneModelId 与当前场景不匹配：'+doc?.sceneModelId);
+    const data=doc?.pose;
+    if(!data||![data.x,data.y,data.groundZ,data.yawDeg,data.viewerUnitsPerMeter].every(Number.isFinite)||!validPositive(data.viewerUnitsPerMeter))throw new Error('配置包含非法位姿或比例');
+    setPose({x:data.x,y:data.y,groundZ:data.groundZ,yawDeg:data.yawDeg,viewerUnitsPerMeter:data.viewerUnitsPerMeter,scaleSource:data.scaleSource||'manual_unverified',visible:data.visible!==false});
+    window.dispatchEvent(new Event('ackermann-calibration-changed'));
+    showStatus('已导入与本场景对应的小车配置。');
+  }
+
+  async function ensureModelLoaded(){
+    if(loaded)return true;
+    if(loadPromise)return loadPromise;
+    loadPromise=(async()=>{
+      showStatus('正在加载完整 Ackermann CAD 模型（10 个部件）...');
+      const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');
+      const loader=new GLTFLoader();
+      const gltf=await new Promise((resolve,reject)=>loader.load(
+        METRIC.meshUrl,resolve,
+        evt=>{if(evt.lengthComputable)showStatus('正在加载 Ackermann GLB：'+Math.round(100*evt.loaded/evt.total)+'%');},
+        reject
+      ));
+      glbAxisFix.add(gltf.scene);
+      for(const n of ['front_left_wheel_link','front_right_wheel_link','rear_left_wheel_link','rear_right_wheel_link']){
+        attachWheelRig(gltf.scene,n);
+      }
+      setWheelAnimation(0,0);
+      const matched=[];
+      gltf.scene.traverse(node=>{
+        if(node.isMesh){node.castShadow=false;node.receiveShadow=false;}
+        if(node.name&&node.name.endsWith('_link'))matched.push(node.name);
+      });
+      loaded=true;
+      lastLoadError=null;
+      showStatus('Ackermann GLB 已加载：10 个 URDF 可视部件，按米制原尺寸保存。');
+      console.info('Ackermann URDF parts',matched);
+      positionVehicle();
+      return true;
+    })().catch(err=>{
+      loadPromise=null;
+      loaded=false;
+      lastLoadError=String(err?.message||err);
+      showStatus('小车模型加载失败：'+lastLoadError+'。检查 assets/ackermann/ackermann_urdf_meters.glb');
+      console.error('Ackermann load failure',err);
+      return false;
+    });
+    return loadPromise;
+  }
+  function stopPlacement(){
+    placing=false;
+    if(getViewMode()==='orbit')orbit.enabled=true;
+    canvas.style.cursor='';
+    $('ackermannPlaceBtn').classList.remove('active');
+    $('ackermannPlaceBtn').textContent='点击参考地面放置';
+  }
+  function setPanelOpen(open){
+    panel.classList.toggle('open',!!open);
+    button.classList.toggle('active',!!open);
+    if(open){
+      window.dispatchEvent(new Event('ackermann-editor-open'));
+      $('drivePanel')?.classList.remove('open');
+      $('driveBtn')?.classList.remove('active');
+      $('modelSwitchPanel').classList.remove('open');
+      $('modelSwitchBtn').classList.remove('active');
+      $('settings').classList.remove('open');
+      $('settingsBtn').classList.remove('active');
+      $('agvPanel').classList.remove('open');
+      $('agvBtn').classList.remove('active');
+    }
+    if(!open&&!placing)stopPlacement();
+  }
+  function beginPlacement(){
+    if(!loaded||!sceneReady){showStatus('请先等待 3DGS 场景和小车模型加载完成。');return;}
+    if(getRouteDiagnostics()?.placing){showStatus('先在 AGV 轨迹面板点击“停止布点”，再放置小车。');return;}
+    if(getViewMode()!=='orbit')enterOrbitMode();
+    placing=true;
+    orbit.enabled=false;
+    canvas.style.cursor='crosshair';
+    $('ackermannPlaceBtn').classList.add('active');
+    $('ackermannPlaceBtn').textContent='取消地面布置';
+    showStatus('放置模式：现在点击场景内参考地面。拾取的是 Z=地面Z 的平面，不是 Gaussian 深度碰撞。');
+    setPanelOpen(false);
+  }
+  function onCanvasPointer(e){
+    if(!placing)return;
+    e.preventDefault();e.stopImmediatePropagation();
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    const rect=canvas.getBoundingClientRect();
+    mouse.x=(e.clientX-rect.left)/rect.width*2-1;
+    mouse.y=-(e.clientY-rect.top)/rect.height*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    groundPlane.set(new THREE.Vector3(0,0,1),-pose.groundZ);
+    if(!raycaster.ray.intersectPlane(groundPlane,hit)){
+      showStatus('当前视线与参考地面不相交。请转到略微俯视角度重试。');return;
+    }
+    if(hit.distanceTo(camera.position)>100000){showStatus('交点距离过远，请调整视角。');return;}
+    setPose({x:hit.x,y:hit.y});
+    window.dispatchEvent(new Event('ackermann-calibration-changed'));
+    stopPlacement();
+    setPanelOpen(true);
+    notify('已放置 Ackermann 小车；请核对地面接触和场景尺寸。');
+  }
+  canvas.addEventListener('pointerdown',onCanvasPointer,true);
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&placing)stopPlacement();});
+
+  // Static 3DGS scene models are asynchronous. Vehicle pose is isolated by scene ID.
+  function onSceneLoading(){
+    sceneEpoch++;
+    sceneReady=false;
+    vehiclePose.visible=false;
+    stopPlacement();
+    setPanelOpen(false);
+    showStatus('正在切换 3DGS 场景；小车位置将按场景独立恢复。');
+  }
+  async function onSceneLoaded(modelId,boundsPromise){
+    sceneModelId=modelId;
+    const epoch=++sceneEpoch;
+    sceneReady=false;
+    positionVehicle();
+    const ok=await ensureModelLoaded();
+    if(epoch!==sceneEpoch||!ok)return;
+    try{
+      const b=await boundsPromise;
+      if(epoch!==sceneEpoch)return;
+      if(b&&!b.isEmpty()){
+        currentBoundsCenter=b.getCenter(new THREE.Vector3());
+        currentFloor=b.max.z; // -Z up; Gaussian floaters can distort this rough floor.
+        const size=b.getSize(new THREE.Vector3());
+        sceneSpan=Math.max(0.05,size.x,size.y);
+      }
+    }catch(err){console.warn('Ackermann scene bounds estimate failed',err);}
+    const last=await getPerSceneSavedPose(modelId);
+    if(epoch!==sceneEpoch)return;
+    sceneReady=true;
+    pose={x:currentBoundsCenter.x,y:currentBoundsCenter.y,groundZ:currentFloor,
+          yawDeg:0,
+          // Nominal CAD scale is metres; this visual estimate is NOT metre registration.
+          viewerUnitsPerMeter:Math.max(.005,Math.min(50,sceneSpan/(METRIC.length*10))),
+          scaleSource:'unverified_preview',visible:true,...(last||{})};
+    writeInputs();positionVehicle();
+    showStatus(last?'已恢复本场景独立的小车尺寸比例和位置草稿。':'已自动放置在估计地面。真实场景米制尺度尚需标定！');
+  }
+  function adoptRouteScale(){
+    const info=getRouteDiagnostics();
+    if(!info||!(info.metersPerUnit>0)){
+      showStatus('AGV 路线尚无比例尺。请先布置 P1/P2，并输入这两点之间的实测距离。');
+      return;
+    }
+    const viewerUnitsPerMeter=1/info.metersPerUnit;
+    if(!validPositive(viewerUnitsPerMeter)){
+      showStatus('路径比例尺无效，不能采用。');return;
+    }
+    setPose({viewerUnitsPerMeter,groundZ:info.groundZ,scaleSource:'from_route_pair'});
+    window.dispatchEvent(new Event('ackermann-calibration-changed'));
+    showStatus('已采用 P1–P2 单段距离估算比例，并与路线参考地面 Z 同步；尚需实物与多点验证。');
+  }
+  function focusVehicle(){
+    if(!sceneReady||!loaded){showStatus('请先加载车辆和场景');return;}
+    if(getViewMode()!=='orbit')enterOrbitMode();
+    const radius=Math.max(.04,pose.viewerUnitsPerMeter*METRIC.length);
+    const look=new THREE.Vector3(pose.x,pose.y,pose.groundZ-METRIC.height*pose.viewerUnitsPerMeter*.5);
+    orbit.enabled=true;
+    orbit.target.copy(look);
+    camera.position.copy(look).add(new THREE.Vector3(2.1*radius,-2.1*radius,-1.25*radius));
+    camera.up.set(0,0,-1);
+    camera.lookAt(look);orbit.update();
+    notify('已聚焦 Ackermann 小车（不修改永久首页视角）。');
+  }
+  function exportPose(){
+    if(!readPoseFromInputs()||!sceneModelId){showStatus('请先加载场景');return;}
+    positionVehicle();persistPose();
+    const out={schema:'ackermann-viewer-placement-v1',sceneModelId,
+      pose:{...pose},
+      model:{url:METRIC.meshUrl,unit:'m',length:METRIC.length,width:METRIC.width,height:METRIC.height,
+             wheelbase:METRIC.frontAxle,frontTrack:METRIC.frontTrack},
+      calibrationStatus:'UNVERIFIED_NEEDS_METRIC_SCENE_REGISTRATION',
+      note:'CAD size is in metres, but viewerUnitsPerMeter requires measured reference points. Ground Z is a reference plane, not obstacle geometry.'};
+    const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=sceneConfigName();document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    showStatus('配置已导出：'+sceneConfigName()+'。放入 config/ 同级文件后可跨浏览器重现。');
+  }
+  button.addEventListener('click',()=>setPanelOpen(!panel.classList.contains('open')));
+  $('ackermannCloseBtn').addEventListener('click',()=>setPanelOpen(false));
+  $('ackermannApplyBtn').addEventListener('click',()=>{
+    const oldScale=pose.viewerUnitsPerMeter;
+    if(!readPoseFromInputs())return;
+    if(Math.abs(oldScale-pose.viewerUnitsPerMeter)>1e-9)pose.scaleSource='manual_unverified';
+    positionVehicle();writeInputs();persistPose();
+    window.dispatchEvent(new Event('ackermann-calibration-changed'));
+    showStatus('已应用 CAD 原尺寸对应的显示比例与地面位置。比例关系仍需真实测量确认。');
+  });
+  $('ackermannRouteScaleBtn').addEventListener('click',adoptRouteScale);
+  $('ackermannPlaceBtn').addEventListener('click',()=>placing?stopPlacement():beginPlacement());
+  $('ackermannFocusBtn').addEventListener('click',focusVehicle);
+  visibleEl.addEventListener('change',()=>setPose({visible:visibleEl.checked}));
+  $('ackermannExportBtn').addEventListener('click',exportPose);
+  $('ackermannImportBtn').addEventListener('click',()=>$('ackermannImportFile').click());
+  $('ackermannImportFile').addEventListener('change',async e=>{
+    const file=e.target.files?.[0];e.target.value='';
+    if(!file)return;
+    try {importDrivePlacement(JSON.parse(await file.text()));notify('已导入小车配置');}
+    catch(err){showStatus('配置导入失败：'+String(err?.message||err));}
+  });
+  writeInputs();
+  positionVehicle();
+  return {
+    onSceneLoading,onSceneLoaded,setPanelOpen,
+    getDriveState:()=>({pose:{...pose},loaded,sceneReady,sceneModelId}),
+    setDrivePose,animateWheels:setWheelAnimation,persistDrivePose:()=>{persistPose();writeInputs();},
+    getDiagnostics:()=>({loaded,sceneReady,sceneModelId,pose,placing,lastLoadError,
+                         glbPartsExpected:METRIC.linkCount,geometryDimensionsMetres:[METRIC.length,METRIC.width,METRIC.height]})
+  };
+}
+
+
+/* v5.5.4 Ackermann kinematic driving simulator.
+ * All simulated controls are LOCAL to the browser; no ROS commands or collision engine.
+ * Convention: CAD X forward, ROS +Y left, Viewer -Z up.
+ * yaw=0 -> Viewer +X; positive yaw -> Viewer -Y.
+ */
+function ackermannWheelAngles(centerRad, wheelbaseM, trackM) {
+  if (Math.abs(centerRad) < 1e-8) return {left:0, right:0};
+  const signedRadius = wheelbaseM / Math.tan(centerRad);
+  return {
+    left: Math.atan(wheelbaseM / (signedRadius - trackM/2)),
+    right: Math.atan(wheelbaseM / (signedRadius + trackM/2))
+  };
+}
+function ackermannPoseStep(state, speedMps, steerRad, dt, viewerUnitsPerMeter, wheelbaseM) {
+  const deltaYaw = speedMps * Math.tan(steerRad) * dt / wheelbaseM;
+  const headingMid = state.yawRad + 0.5*deltaYaw;
+  return {
+    x:state.x + speedMps * viewerUnitsPerMeter * dt * Math.cos(headingMid),
+    y:state.y - speedMps * viewerUnitsPerMeter * dt * Math.sin(headingMid),
+    yawRad:state.yawRad + deltaYaw
+  };
+}
+function driveApproach(current,target,maxDelta) {
+  return current + Math.max(-maxDelta,Math.min(maxDelta,target-current));
+}
+function createAckermannDriveSim({THREE, scene, camera, orbit, keys,
+                                 cad, agvEditor, getViewMode, enterOrbitMode, notify}) {
+  const $=id=>document.getElementById(id);
+  const panel=$('drivePanel');
+  const button=$('driveBtn');
+  const status=$('driveStatus');
+  const speedEl=$('driveSpeed');
+  const steerLimitEl=$('driveSteerLimit');
+  const followToggle=$('driveFollow');
+  const stateText=$('driveTelemetry');
+  const modeText=$('driveModeText');
+
+  let driveMode='idle'; // idle, manual, auto
+  let follow=false;
+  let activeSceneId=null;
+  let startPose=null; // visual placement calibration snapshot. Never auto-overwrite localStorage.
+  let v=0, steer=0, totalDistance=0, elapsed=0, autoProgress=0;
+  let autoPath=null;
+  let pendingAutoPath=null;
+  const autoConfirmOverlay=$('driveAutoConfirmOverlay');
+  let warning='';
+  let trailPositions=[];
+  let lastTrailPt=null;
+  let frameAccum=0;
+  let telemetryAccum=0;
+  const FIXED_DT=1/60;
+  const MAX_ACCUM=0.1;
+  const ACCEL=0.5, BRAKE=0.8, STEER_RATE=THREE.MathUtils.degToRad(90);
+  const trailGroup=new THREE.Group();
+  trailGroup.name='ACKERMANN_DRIVE_V554_SIM_TRAIL';
+  scene.add(trailGroup);
+  let trailLine=null;
+
+  function modelReady(){return cad.getDriveState().loaded && cad.getDriveState().sceneReady;}
+  function getScale(){return cad.getDriveState().pose.viewerUnitsPerMeter;}
+  function currentPose(){return cad.getDriveState().pose;}
+  function fmt(n,d=2){return Number(n).toFixed(d);}
+  function setStatus(message){warning=message;status.textContent=message;}
+  function closeOtherPanels(){
+    for(const [panelId,btnId] of [
+      ['ackermannPanel','ackermannBtn'],['agvPanel','agvBtn'],
+      ['modelSwitchPanel','modelSwitchBtn'],['settings','settingsBtn']
+    ]){
+      $(panelId)?.classList.remove('open');
+      $(btnId)?.classList.remove('active');
+    }
+  }
+  function setPanelOpen(open){
+    panel.classList.toggle('open',!!open);
+    button.classList.toggle('active',!!open);
+    if(open)closeOtherPanels();
+    else {
+      hideAutoConfirmation();
+      if(isActive())stop({exit:true,silent:true});
+    } // Closing controls disarms driving.
+  }
+  let lastTrailDrawMs=0;
+  function drawTrail(force=false){
+    const now=performance.now();
+    if(!force && now-lastTrailDrawMs<180)return;
+    lastTrailDrawMs=now;
+    if(trailLine){
+      trailGroup.remove(trailLine);
+      trailLine.geometry.dispose();trailLine.material.dispose();trailLine=null;
+    }
+    if(trailPositions.length<2)return;
+    const ap=traceAppearance.get();
+    const scale=Number(getScale());
+    trailLine=createColoredTrackMesh(trailPositions,
+      ap.widthMeters*(Number.isFinite(scale)&&scale>0?scale:.0738821),
+      'trail',ap.palette);
+    if(trailLine){
+      trailLine.renderOrder=148;
+      trailLine.name='ACKERMANN_gradient_travelled_path';
+      trailGroup.add(trailLine);
+    }
+  }
+  function clearTrail(){trailPositions=[];lastTrailPt=null;drawTrail(true);}
+  function sampleTrail(){
+    const p=currentPose();
+    const scale=p.viewerUnitsPerMeter;
+    const curr=new THREE.Vector3(p.x,p.y,p.groundZ-.025*scale);
+    if(lastTrailPt && curr.distanceTo(lastTrailPt)<Math.max(1e-5,.1*scale))return;
+    lastTrailPt=curr;
+    trailPositions.push(curr);
+    if(trailPositions.length>1800)trailPositions.splice(0,trailPositions.length-1800);
+    drawTrail();
+  }
+  function telemetry(){
+    const p=currentPose();
+    const leftRight=ackermannWheelAngles(steer,.802603,.688);
+    modeText.textContent=driveMode==='manual'?'手动驾驶':driveMode==='auto'?'自动巡航':'待机';
+    stateText.textContent=
+      `速度 ${fmt(v,3)} m/s | 方向盘 ${fmt(THREE.MathUtils.radToDeg(steer),1)}°\n`+
+      `左前轮 ${fmt(THREE.MathUtils.radToDeg(leftRight.left),1)}° / 右前轮 ${fmt(THREE.MathUtils.radToDeg(leftRight.right),1)}°\n`+
+      `里程 ${fmt(totalDistance,2)} m | 时间 ${fmt(elapsed,1)} s\n`+
+      `X ${fmt(p.x,5)} | Y ${fmt(p.y,5)} | Yaw ${fmt(p.yawDeg,1)}°\n`+
+      (warning||'仅浏览器模拟：无碰撞、避障、ROS 指令。');
+  }
+  function isActive(){return driveMode!=='idle';}
+  function hideAutoConfirmation(){
+    pendingAutoPath=null;
+    autoConfirmOverlay.classList.remove('open');
+    autoConfirmOverlay.setAttribute('aria-hidden','true');
+  }
+  function showAutoConfirmation(path){
+    pendingAutoPath=path;
+    const km=path.total/getScale();
+    $('driveAutoConfirmDetails').textContent=
+      `${path.pts.length} \u4e2a\u8def\u70b9\uff0c\u7ebf\u8def\u957f\u5ea6\u7ea6 ${km.toFixed(2)} m\uff0c\u6a21\u62df\u901f\u5ea6 ${Number(speedEl.value).toFixed(2)} m/s`;
+    autoConfirmOverlay.classList.add('open');
+    autoConfirmOverlay.setAttribute('aria-hidden','false');
+    setStatus('\u7b49\u5f85\u7528\u6237\u786e\u8ba4\u6a21\u62df\u8def\u7ebf\uff0c\u5c1a\u672a\u542f\u52a8\u5c0f\u8f66\u3002');
+    $('driveAutoConfirmStart').focus();
+  }
+  function stop({resetSteer=true,exit=false,silent=false}={}){
+    v=0;
+    if(resetSteer)steer=0;
+    cad.animateWheels(steer,0);
+    if(exit){driveMode='idle';hideAutoConfirmation();}
+    if(follow&&exit)setFollow(false);
+    if(exit)keys.clear();
+    $('driveStartBtn').textContent='进入手动驾驶';
+    $('driveAutoBtn').textContent='启动自动巡航';
+    if(!silent)setStatus(exit?'已退出驾驶，车辆已停止。':'车辆已停止。');
+    telemetry();
+  }
+  function reset(){
+    stop({exit:true,silent:true});
+    clearTrail();
+    totalDistance=0;elapsed=0;autoProgress=0;autoPath=null;
+    if(startPose&&modelReady()){
+      cad.setDrivePose({x:startPose.x,y:startPose.y,yawDeg:startPose.yawDeg,groundZ:startPose.groundZ});
+      setStatus('已恢复初始车位（不覆盖保存的标定配置）。');
+    }else setStatus('当前场景尚未加载初始小车配置。');
+    telemetry();
+  }
+  function makeReady(){
+    if(!modelReady()) {setStatus('先等待 3DGS 场景和 Ackermann GLB 完成加载。');return false;}
+    const p=currentPose();
+    if(!(p.viewerUnitsPerMeter>0) || !Number.isFinite(p.x) || !Number.isFinite(p.y)){
+      setStatus('车辆位置或比例无效；先在 Ackermann CAD 面板校准。');return false;
+    }
+    return true;
+  }
+  function beginManual(){
+    if(driveMode==='manual') {stop({exit:true});return;}
+    if(!makeReady())return;
+    stop({exit:true,silent:true});
+    if(getViewMode()!=='orbit')enterOrbitMode();
+    driveMode='manual';autoPath=null;
+    keys.clear();
+    $('driveStartBtn').textContent='退出手动驾驶';
+    setStatus('驾驶已启用。W/S 前后，A/D 前轮转向；空格紧急停车。');
+    notify('驾驶模式：W/S 前进倒车，A/D 转向，空格停车。');
+    telemetry();
+  }
+  function pathFromWaypoints(waypoints){
+    if(!Array.isArray(waypoints)||waypoints.length<3)return null;
+    const pts=waypoints.map(p=>({x:p.x,y:p.y}));
+    const cumulative=[0];
+    const lengths=[];
+    for(let i=1;i<pts.length;i++){
+      const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+      if(d<1e-7)return null;
+      lengths.push(d);
+      cumulative.push(cumulative.at(-1)+d);
+    }
+    return {pts,lengths,cumulative,total:cumulative.at(-1)};
+  }
+  function samplePath(path,offset){
+    const u=Math.max(0,Math.min(path.total,offset));
+    for(let i=0;i<path.lengths.length;i++){
+      if(u<=path.cumulative[i+1]||i===path.lengths.length-1){
+        const t=Math.max(0,Math.min(1,(u-path.cumulative[i])/path.lengths[i]));
+        const a=path.pts[i],b=path.pts[i+1];
+        return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+      }
+    }
+    return path.pts.at(-1);
+  }
+  function nearestProgress(path,x,y){
+    let bestD2=Infinity,bestArc=0;
+    for(let i=0;i<path.lengths.length;i++){
+      const a=path.pts[i],b=path.pts[i+1];
+      const dx=b.x-a.x,dy=b.y-a.y;
+      const t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy)));
+      const px=a.x+t*dx,py=a.y+t*dy;
+      const d2=(x-px)**2+(y-py)**2;
+      if(d2<bestD2){bestD2=d2;bestArc=path.cumulative[i]+t*path.lengths[i];}
+    }
+    return {arc:bestArc,deviation:Math.sqrt(bestD2)};
+  }
+  function beginAuto(){
+    if(driveMode==='auto'){stop({exit:true});return;}
+    if(!makeReady())return;
+    const p=currentPose();
+    const path=pathFromWaypoints(agvEditor.getWaypoints());
+    if(!path){setStatus('\u81ea\u52a8\u5de1\u822a\u9700\u8981\u81f3\u5c11 3 \u4e2a\u4e0d\u91cd\u5408\u7684\u9053\u8def\u8def\u70b9\u3002');return;}
+    if(path.total/p.viewerUnitsPerMeter<1){setStatus('\u6f14\u793a\u8def\u7ebf\u603b\u957f\u4e0d\u8db3 1m\uff0c\u8bf7\u91cd\u65b0\u5e03\u7f6e\u9053\u8def\u8def\u70b9\u3002');return;}
+    // Do not use window.confirm(): it can asynchronously blur the window,
+    // and the existing blur safety handler disarms the simulation immediately.
+    // A local DOM overlay does not leave the page or reset keyboard focus.
+    if(driveMode==='manual')stop({exit:true,silent:true});
+    showAutoConfirmation(path);
+  }
+  function confirmAutoStart(){
+    const path=pendingAutoPath;
+    if(!path)return;
+    hideAutoConfirmation();
+    if(!makeReady())return;
+    stop({exit:true,silent:true});
+    if(getViewMode()!=='orbit')enterOrbitMode();
+    keys.clear(); // no stale Space/keyboard state from the confirmation interaction
+    // Start at the first path point with heading aligned to the first segment.
+    const first=path.pts[0],second=path.pts[1];
+    const theta=Math.atan2(-(second.y-first.y),second.x-first.x);
+    cad.setDrivePose({x:first.x,y:first.y,yawDeg:THREE.MathUtils.radToDeg(theta)});
+    autoPath=path;autoProgress=0;driveMode='auto';
+    frameAccum=0;telemetryAccum=0;
+    totalDistance=0;elapsed=0;clearTrail();sampleTrail();
+    $('driveAutoBtn').textContent='\u505c\u6b62\u81ea\u52a8\u5de1\u822a';
+    setStatus('\u81ea\u52a8\u5de1\u822a\u8fd0\u884c\u4e2d\uff08Pure Pursuit \u89c6\u89c9\u6f14\u793a\uff0c\u65e0\u78b0\u649e\u907f\u969c\uff09\u3002');
+    notify('\u81ea\u52a8\u5de1\u822a\u5df2\u542f\u52a8\uff1b\u6309\u7a7a\u683c\u53ef\u4ee5\u7d27\u6025\u505c\u6b62\u3002');
+    telemetry();
+  }
+  function computeAutoDemand(){
+    if(!autoPath)return {targetSpeed:0,targetSteer:0};
+    const p=currentPose();
+    const scale=p.viewerUnitsPerMeter;
+    const progress=nearestProgress(autoPath,p.x,p.y);
+    autoProgress=Math.max(autoProgress,progress.arc);
+    const rest=Math.max(0,(autoPath.total-autoProgress)/scale);
+    const maxSpeed=Math.min(1,Math.max(.05,Number(speedEl.value)||.3));
+    const lookAheadM=Math.max(.55,Math.min(1.2,.6+Math.abs(v)*.7));
+    const look=samplePath(autoPath,autoProgress+lookAheadM*scale);
+    const theta=THREE.MathUtils.degToRad(p.yawDeg);
+    const dx=(look.x-p.x)/scale,dy=(look.y-p.y)/scale;
+    const lateral= -dx*Math.sin(theta) - dy*Math.cos(theta);
+    const dist2=Math.max(.02,dx*dx+dy*dy);
+    const curvature=2*lateral/dist2;
+    const maxAngle=THREE.MathUtils.degToRad(Number(steerLimitEl.value)||25);
+    const demand=Math.max(-maxAngle,Math.min(maxAngle,Math.atan(.802603*curvature)));
+    if(progress.deviation/scale>1.4){
+      stop({exit:true,silent:true});
+      setStatus('偏离演示路线超过 1.4m，已终止自动巡航。需重新检查路点和转弯半径。');
+      return {targetSpeed:0,targetSteer:0};
+    }
+    const endpoint=autoPath.pts.at(-1);
+    const distanceToEnd=Math.hypot(endpoint.x-p.x,endpoint.y-p.y)/scale;
+    if(distanceToEnd<.12 && rest<.18){
+      stop({exit:true,silent:true});
+      setStatus('已到达演示路线终点，车辆停止。');
+      return {targetSpeed:0,targetSteer:0};
+    }
+    const slowSpeed=Math.sqrt(Math.max(0,2*BRAKE*rest));
+    return {targetSpeed:Math.min(maxSpeed,slowSpeed),targetSteer:demand};
+  }
+  function step(dt){
+    if(!makeReadyQuiet())return;
+    if(driveMode==='idle')return;
+    if(keys.has('Space')){
+      stop({exit:true,silent:true});
+      setStatus('空格紧急停车：运动已停止，请重新点击开始才能恢复。');
+      return;
+    }
+    const p=currentPose();
+    let targetSpeed=0,targetSteer=0;
+    const maxSpeed=Math.min(1,Math.max(.05,Number(speedEl.value)||.3));
+    const maxSteer=THREE.MathUtils.degToRad(Number(steerLimitEl.value)||25);
+    if(driveMode==='manual'){
+      const throttle=Number(keys.has('KeyW'))-Number(keys.has('KeyS'));
+      const steering=Number(keys.has('KeyA'))-Number(keys.has('KeyD'));
+      targetSpeed=throttle*maxSpeed;
+      targetSteer=steering*maxSteer;
+    }else if(driveMode==='auto'){
+      const demand=computeAutoDemand();
+      if(driveMode!=='auto')return;
+      targetSpeed=demand.targetSpeed;
+      targetSteer=demand.targetSteer;
+    }
+    const maxDv=(Math.abs(targetSpeed)<Math.abs(v) ? BRAKE : ACCEL)*dt;
+    v=driveApproach(v,targetSpeed,maxDv);
+    steer=driveApproach(steer,targetSteer,STEER_RATE*dt);
+    const deltaDist=v*dt;
+    const next=ackermannPoseStep({x:p.x,y:p.y,yawRad:THREE.MathUtils.degToRad(p.yawDeg)},v,steer,dt,p.viewerUnitsPerMeter,.802603);
+    cad.setDrivePose({x:next.x,y:next.y,yawDeg:THREE.MathUtils.radToDeg(next.yawRad)});
+    cad.animateWheels(steer,deltaDist);
+    totalDistance+=Math.abs(deltaDist);
+    elapsed+=dt;
+    sampleTrail();
+  }
+  function makeReadyQuiet(){return modelReady() && Number.isFinite(getScale()) && getScale()>0;}
+  function tick(dt){
+    if(document.hidden || !makeReadyQuiet())return;
+    frameAccum=Math.min(frameAccum+dt,MAX_ACCUM);
+    while(frameAccum>=FIXED_DT){step(FIXED_DT);frameAccum-=FIXED_DT;}
+    telemetryAccum+=dt;
+    if(telemetryAccum>=.15){telemetry();telemetryAccum=0;}
+  }
+  let viewTarget=new THREE.Vector3();
+  let desiredCamera=new THREE.Vector3();
+  let currentLook=new THREE.Vector3();
+  function updateFollow(dt){
+    if(!follow||!makeReadyQuiet())return false;
+    if(getViewMode()!=='orbit')return false;
+    const p=currentPose(),theta=THREE.MathUtils.degToRad(p.yawDeg),scale=p.viewerUnitsPerMeter;
+    const fx=Math.cos(theta),fy=-Math.sin(theta);
+    desiredCamera.set(p.x - fx*3.6*scale,p.y - fy*3.6*scale,p.groundZ-1.8*scale);
+    viewTarget.set(p.x+fx*.8*scale,p.y+fy*.8*scale,p.groundZ-.4*scale);
+    const alpha=1-Math.exp(-4*Math.max(.001,dt));
+    camera.position.lerp(desiredCamera,alpha);
+    orbit.target.lerp(viewTarget,alpha);
+    camera.up.set(0,0,-1);
+    camera.lookAt(orbit.target);
+    // Updating internal orbit spherical state prevents a jump on exit.
+    orbit.update();
+    return true;
+  }
+  function setFollow(on){
+    follow=Boolean(on);
+    followToggle.checked=follow;
+    if(follow){
+      if(getViewMode()!=='orbit')enterOrbitMode();
+      orbit.enabled=false;
+    }else{
+      orbit.enabled=true;
+    }
+  }
+  function onSceneLoading(){
+    hideAutoConfirmation();
+    stop({exit:true,silent:true});
+    setFollow(false);startPose=null;activeSceneId=null;
+    clearTrail();frameAccum=0;
+    totalDistance=0;elapsed=0;autoPath=null;
+    setPanelOpen(false);
+    setStatus('模型切换中：驾驶已停止，不跨场景复用车位和轨迹。');
+  }
+  function onSceneLoaded(id){
+    activeSceneId=id;
+    const p=currentPose();
+    startPose={...p};
+    stop({exit:true,silent:true});
+    clearTrail();frameAccum=0;totalDistance=0;elapsed=0;
+    setStatus('已读取本场景小车配置。可进入手动驾驶，或先新建道路演示路线。');
+    telemetry();
+  }
+  button.addEventListener('click',()=>setPanelOpen(!panel.classList.contains('open')));
+  $('driveCloseBtn').addEventListener('click',()=>setPanelOpen(false));
+  $('driveStartBtn').addEventListener('click',beginManual);
+  $('driveAutoBtn').addEventListener('click',beginAuto);
+  $('driveEmergencyBtn').addEventListener('click',()=>{stop({exit:true,silent:true});setStatus('紧急停车：运动已停止，需重新点击开始。');telemetry();});
+  $('driveResetBtn').addEventListener('click',reset);
+  $('driveSaveBtn').addEventListener('click',()=>{
+    if(!makeReady())return;
+    stop({exit:true,silent:true});
+    cad.persistDrivePose();
+    startPose={...currentPose()};
+    setStatus('已明确保存当前小车位置。此前标定位置已更新，可通过导出 JSON 备份。');
+  });
+  traceAppearance.subscribe(()=>drawTrail(true));
+  $('driveClearTrailBtn').addEventListener('click',clearTrail);
+  followToggle.addEventListener('change',()=>setFollow(followToggle.checked));
+  speedEl.addEventListener('input',()=>{$('driveSpeedRead').textContent=Number(speedEl.value).toFixed(2);});
+  steerLimitEl.addEventListener('input',()=>{$('driveSteerRead').textContent=String(Number(steerLimitEl.value));});
+  window.addEventListener('ackermann-editor-open',()=>{if(isActive())stop({exit:true,silent:true});});
+  window.addEventListener('ackermann-calibration-changed',()=>{
+    if(!isActive()&&makeReadyQuiet())startPose={...currentPose()};
+  });
+  function focusStop(reason){
+    if(!isActive())return;
+    stop({exit:true,silent:true});
+    setStatus(reason);
+    telemetry();
+  }
+  window.addEventListener('blur',()=>focusStop('\u7a97\u53e3\u5931\u53bb\u7126\u70b9\uff0c\u4eff\u771f\u5df2\u505c\u6b62\u3002\u8bf7\u91cd\u65b0\u70b9\u51fb\u542f\u52a8\u3002'));
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)focusStop('\u5207\u6362\u9875\u9762\u540e\u5df2\u505c\u6b62\u4eff\u771f\uff0c\u8bf7\u91cd\u65b0\u542f\u52a8\u3002');});
+  $('driveAutoConfirmStart').addEventListener('click',confirmAutoStart);
+  $('driveAutoConfirmCancel').addEventListener('click',()=>{
+    hideAutoConfirmation();
+    setStatus('\u5df2\u53d6\u6d88\u81ea\u52a8\u5de1\u822a\uff0c\u5c0f\u8f66\u6ca1\u6709\u542f\u52a8\u3002');
+    telemetry();
+  });
+  autoConfirmOverlay.addEventListener('click',event=>{
+    if(event.target===autoConfirmOverlay)$('driveAutoConfirmCancel').click();
+  });
+  window.addEventListener('keydown',event=>{
+    if(event.key==='Escape' && pendingAutoPath)$('driveAutoConfirmCancel').click();
+  });
+  setPanelOpen(false);
+  setStatus('等待模型加载；这是虚拟运动演示，不连接 ROS。');
+  telemetry();
+  return {tick,updateFollow,isActive,onSceneLoading,onSceneLoaded,setPanelOpen,
+          stopDrive:()=>stop({exit:true})};
+}
+
+
+// v5.5 is an isolated experiment; index.html remains byte-identical to v5.4.
+const agvEditor=createAgvRouteEditor({
+  THREE,scene,camera,canvas,orbit,
+  getViewMode:()=>mode,
+  switchToOrbit:()=>enterOrbit(),
+  notify:(message)=>toast(message)
+});
+
+
+function setStatus(t){statusEl.textContent=t}
+function setLoading(v,t=""){
+  loading=v;
+  progressWrap.style.display=v?"block":"none";
+  if(t)setStatus(t);
+
+  if(v){
+    loadingOverlay.classList.remove("hidden");
+    if(t)loadingStage.textContent=t;
+  }else{
+    loadingOverlay.classList.add("hidden");
+    loadingBar.classList.remove("parsing");
+  }
+}
+
+function formatMB(n){
+  return (n/1024/1024).toFixed(1)+" MB";
+}
+
+function setDownloadProgress(received,total){
+  loadingBar.classList.remove("parsing");
+
+  if(total>0){
+    const pct=Math.max(0,Math.min(100,(received/total)*100));
+    loadingPercent.textContent=Math.round(pct)+"%";
+    loadingBar.style.width=pct.toFixed(1)+"%";
+    loadingStage.textContent="正在下载 3DGS 模型…";
+    loadingBytes.textContent=formatMB(received)+" / "+formatMB(total);
+  }else{
+    loadingPercent.textContent="…";
+    loadingBar.classList.add("parsing");
+    loadingStage.textContent="正在下载 3DGS 模型…";
+    loadingBytes.textContent=formatMB(received)+" 已接收";
+  }
+}
+
+function setParsingStage(){
+  loadingPercent.textContent="100%";
+  loadingBar.style.width="100%";
+  loadingBar.classList.add("parsing");
+  loadingStage.textContent="模型下载完成，正在解析高斯场景…";
+  loadingBytes.textContent="正在构建可交互场景，请稍候";
+}
+
+async function fetchBytesWithProgress(url){
+  const r=await fetch(url,{cache:"default"});
+  if(!r.ok)throw new Error("模型下载失败："+r.status+" "+r.statusText);
+
+  const total=Number(r.headers.get("content-length"))||0;
+
+  if(!r.body || !r.body.getReader){
+    const buf=await r.arrayBuffer();
+    setDownloadProgress(buf.byteLength,buf.byteLength);
+    return new Uint8Array(buf);
+  }
+
+  const reader=r.body.getReader();
+  // Content-Length is provided by Python http.server and GitHub Pages.
+  // Preallocating avoids buffering another ~218 MiB of chunks for a large PLY.
+  const direct=total>0 && total<1024*1024*1024 && Number.isSafeInteger(total)
+    ? new Uint8Array(total) : null;
+  const chunks=[];
+  let received=0;
+
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    if(direct){
+      if(received+value.byteLength>direct.length)throw new Error('Invalid Content-Length for model');
+      direct.set(value,received);
+    }else{
+      chunks.push(value);
+    }
+    received+=value.byteLength;
+    setDownloadProgress(received,total);
+  }
+
+  if(direct){
+    if(received!==total)throw new Error('Incomplete model download: '+received+' / '+total);
+    return direct;
+  }
+  const bytes=new Uint8Array(received);
+  let offset=0;
+  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+  if(total===0)setDownloadProgress(received,received);
+  return bytes;
+}
+async function readLocalFileWithProgress(file){
+  if(!file.stream || !file.size){
+    const buf=await file.arrayBuffer();
+    setDownloadProgress(buf.byteLength,buf.byteLength);
+    return new Uint8Array(buf);
+  }
+  const reader=file.stream().getReader();
+  const bytes=new Uint8Array(file.size);
+  let received=0;
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    if(received+value.byteLength>bytes.length)throw new Error('Invalid local model size');
+    bytes.set(value,received);
+    received+=value.byteLength;
+    setDownloadProgress(received,file.size);
+    loadingStage.textContent='Reading local Gaussian model...';
+  }
+  if(received!==bytes.length)throw new Error('Incomplete local model read');
+  return bytes;
+}
+function clearError(){errorEl.style.display="none";errorEl.textContent=""}
+function showError(e){console.error(e);errorEl.style.display="block";errorEl.textContent="错误："+(e?.message||String(e))}
+let toastTimer=null;
+function toast(msg){
+  const el=$("toast");
+  el.textContent=msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove("show"),1600);
+}
+function updateModeHint(){
+  if(IS_TOUCH && mode==="fps"){
+    $("modeHintText").innerHTML="<b>手机漫游</b> · 左侧摇杆移动 · 右侧滑动视角 · ↑/↓ 升降";
+  }else{
+    $("modeHintText").innerHTML = mode==="fps"
+      ? "<b>漫游模式</b> · 点击画面锁定鼠标 · WASD 移动 · Space/Shift 升降 · Esc 释放鼠标"
+      : "<b>轨道模式</b> · 左键旋转 · 右键平移 · 滚轮缩放";
+  }
+}
+function showIntro(){
+  $("introOverlay").classList.remove("hidden");
+}
+function hideIntro(){
+  $("introOverlay").classList.add("hidden");
+}
+function openShare(){
+  $("sharePanel").classList.add("open");
+  $("shareBtn").classList.add("active");
+}
+function closeShare(){
+  $("sharePanel").classList.remove("open");
+  $("shareBtn").classList.remove("active");
+}
+async function copyPublicLink(){
+  try{
+    await navigator.clipboard.writeText(PUBLIC_URL);
+    toast("公网链接已复制");
+  }catch(_){
+    const ta=document.createElement("textarea");
+    ta.value=PUBLIC_URL;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    toast("公网链接已复制");
+  }
+}
+function homeKey(){return "3dgs-viewer-home-v3:"+currentId}
+
+function getLookTarget(distance=Math.max(1,sceneRadius*.4)){
+  const dir=new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  return camera.position.clone().addScaledVector(dir,distance);
+}
+
+function serializeView(){
+  const target=mode==="orbit" ? orbit.target.clone() : getLookTarget();
+  return {
+    p:camera.position.toArray(),
+    t:target.toArray()
+  };
+}
+
+// 不再直接恢复 quaternion，避免把旧配置里的 roll 一起带回来。
+// 只用 position + target，并用固定 -Z up 重建相机姿态。
+function applyView(v){
+  if(!v||!Array.isArray(v.p)||!Array.isArray(v.t))return false;
+  camera.position.fromArray(v.p);
+  camera.up.copy(SCENE_UP);
+  orbit.target.fromArray(v.t);
+  camera.lookAt(orbit.target);
+  orbit.update();
+  return true;
+}
+
+function saveHome(){
+  if(!currentId){setStatus("请先加载模型。");return}
+  localStorage.setItem(homeKey(),JSON.stringify(serializeView()));
+  setStatus("已保存当前首页视角。Roll 已自动锁正。");toast("首页视角已保存");
+}
+
+function loadLocalHome(){
+  try{
+    const raw=localStorage.getItem(homeKey());
+    return raw?JSON.parse(raw):null;
+  }catch(_){return null}
+}
+
+function clearHome(){
+  if(currentId)localStorage.removeItem(homeKey());
+  setStatus("已清除当前浏览器保存的首页视角。");toast("浏览器视角已清除");
+}
+
+async function loadPermanentConfig(){
+  permanentConfig=null;
+  const spec=activeSceneSpec;
+  // Never reuse another scene's home camera, even if file names look similar.
+  if(!spec?.homeConfig)return null;
+  try{
+    const r=await fetch(spec.homeConfig,{cache:'no-store'});
+    if(!r.ok)return null;
+    const cfg=await r.json();
+    const acceptedIds=new Set([currentId,'url:'+spec.url]);
+    if(spec.id==='office2'){
+      acceptedIds.add('url:models/splat.ply');
+      acceptedIds.add('url:models/splat.spz');
+    }
+    if(!acceptedIds.has(cfg?.modelId)){
+      console.warn('Ignored home camera config belonging to a different model:',spec.homeConfig);
+      return null;
+    }
+    if(!cfg.homeView)return null;
+    permanentConfig=cfg;
+    return cfg;
+  }catch(err){
+    console.info('No per-scene permanent camera config yet',err);
+    return null;
+  }
+}
+
+function downloadJson(obj,name){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+  const u=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=u;a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(u);
+}
+
+function exportPermanentHome(){
+  if(!currentModel){setStatus("请先加载模型。");return}
+  downloadJson({
+    version:3,
+    modelId:currentId,
+    homeView:serializeView(),
+    sceneUp:[0,0,-1],
+    upAxis:"-Z",
+    firstPersonPitchLimitDeg:45,
+    orbitPitchLimitDeg:55,
+    rollLocked:true,
+    projectTitle:REPORT_TITLE,
+    projectSubtitle:REPORT_SUBTITLE
+  },activeSceneSpec?.id==='office2' ? 'viewer_config.json' : ('home_'+(activeSceneSpec?.id||'local')+'.json'));
+  setStatus('Home camera exported for this scene. Copy it to the scene homeConfig path to share across browsers.');
+}
+
+function percentile(a,p){
+  if(!a.length)return 0;
+  return a[Math.max(0,Math.min(a.length-1,Math.floor((a.length-1)*p)))];
+}
+
+async function computeRobustBounds(mesh){
+  await mesh.initialized;
+  mesh.updateMatrixWorld(true);
+
+  const xs=[],ys=[],zs=[];
+  const total=mesh.numSplats||1;
+  const stride=Math.max(1,Math.floor(total/20000));
+  const v=new THREE.Vector3();
+
+  mesh.forEachSplat((i,center)=>{
+    if(i%stride!==0)return;
+    v.copy(center).applyMatrix4(mesh.matrixWorld);
+    if(Number.isFinite(v.x)&&Number.isFinite(v.y)&&Number.isFinite(v.z)){
+      xs.push(v.x);ys.push(v.y);zs.push(v.z);
+    }
+  });
+
+  xs.sort((a,b)=>a-b);ys.sort((a,b)=>a-b);zs.sort((a,b)=>a-b);
+
+  return new THREE.Box3(
+    new THREE.Vector3(percentile(xs,.02),percentile(ys,.02),percentile(zs,.02)),
+    new THREE.Vector3(percentile(xs,.98),percentile(ys,.98),percentile(zs,.98))
+  );
+}
+
+function frameBounds(box){
+  const center=box.getCenter(new THREE.Vector3());
+  const size=box.getSize(new THREE.Vector3());
+  const maxDim=Math.max(size.x,size.y,size.z,.1);
+  sceneRadius=maxDim*.5;
+
+  const vFov=THREE.MathUtils.degToRad(camera.fov);
+  const distance=(maxDim/(2*Math.tan(vFov/2)))*1.05;
+
+  // 用与 -Z-up 不平行的方向自动取景
+  const dir=new THREE.Vector3(.75,.65,.18).normalize();
+
+  camera.position.copy(center).addScaledVector(dir,distance);
+  camera.up.copy(SCENE_UP);
+  orbit.target.copy(center);
+  camera.lookAt(center);
+  orbit.update();
+
+  autoView=serializeView();
+}
+
+async function autoFrame(){
+  if(!currentModel)return;
+  try{
+    const box=await computeRobustBounds(currentModel);
+    frameBounds(box);
+    setStatus("已自动适配；场景固定 -Z-up。");
+  }catch(e){
+    showError(e);
+    setStatus("自动适配失败。");
+  }
+}
+
+function removeModel(){
+  driveSim.onSceneLoading();
+  agvEditor.onModelLoading();
+  ackermannCad.onSceneLoading();
+  if(currentModel){
+    scene.remove(currentModel);
+    currentModel.dispose?.();
+    currentModel=null;
+  }
+}
+
+async function addModel(init,id){
+  removeModel();
+  clearError();
+  setLoading(true,"正在解析 3DGS 模型...");
+  setParsingStage();
+  currentId=id;
+  autoView=null;
+  currentModel=new SplatMesh(init);
+  currentModel.quaternion.set(1,0,0,0);
+  scene.add(currentModel);
+
+  try{
+    await currentModel.initialized;
+    $("exportSpzBtn").disabled=false;
+    dropEl.classList.add("hidden");
+
+    const agvBoundsPromise=computeRobustBounds(currentModel);
+    void agvEditor.onModelLoaded(id,agvBoundsPromise);
+    void ackermannCad.onSceneLoaded(id,agvBoundsPromise).then(()=>{
+      if(currentId===id && ackermannCad.getDriveState().sceneReady)driveSim.onSceneLoaded(id);
+    }).catch(err=>console.warn('Ackermann driving model not ready',err));
+
+    const cfg=await loadPermanentConfig();
+
+    if(cfg?.homeView&&applyView(cfg.homeView)){
+      setLoading(false);
+      setStatus("已加载模型，并应用永久首页视角。场景固定 -Z-up。");toast("模型已加载");
+      return true;
+    }
+
+    const local=loadLocalHome();
+    if(local&&applyView(local)){
+      setLoading(false);
+      setStatus("已恢复浏览器保存的首页视角。场景固定 -Z-up。");
+      return true;
+    }
+
+    const box=await agvBoundsPromise;
+    frameBounds(box);
+    setLoading(false);
+    setStatus("已自动适配。请调整到满意视角后保存首页。");
+    return true;
+  }catch(e){
+    setLoading(false);
+    showError(e);
+    setStatus("模型加载失败。");
+    return false;
+  }
+}
+
+async function loadLocalFile(file){
+  if(!file||loading)return;
+  if(!SUPPORTED_MODEL_EXT.test(file.name)){
+    setModelSwitchInfo(MODEL_HINTS.unsupported);
+    showError(new Error(MODEL_HINTS.unsupported));
+    return;
+  }
+  if(mode==='fps')enterOrbit();
+  activeSceneSpec={id:'local:'+file.name+':'+file.size+':'+file.lastModified,name:file.name,url:null,homeConfig:null,unverifiedUp:true};
+  setModelPanelOpen(false);
+  currentFile=file;
+  currentUrl=null;
+
+  try{
+    setLoading(true,`正在读取 ${file.name} ...`);
+    loadingPercent.textContent="…";
+    loadingBar.classList.add("parsing");
+    loadingStage.textContent="正在读取本地模型…";
+    loadingBytes.textContent=file.name;
+    const bytes=await readLocalFileWithProgress(file);
+    currentBytes=bytes;
+    const ok=await addModel({fileBytes:bytes,fileName:file.name},'local:'+file.name+':'+file.size+':'+file.lastModified);
+    if(ok){showActiveModel(file.name+' (local, temporary)');setStatus(MODEL_HINTS.test);}
+  }catch(e){
+    setLoading(false);
+    showError(e);
+  }
+}
+
+async function urlExists(url){
+  try{
+    let r=await fetch(url,{method:"HEAD",cache:"no-store"});
+    if(r.ok)return true;
+
+    r=await fetch(url,{
+      headers:{"Range":"bytes=0-0"},
+      cache:"no-store"
+    });
+
+    return r.ok||r.status===206;
+  }catch(_){
+    return false;
+  }
+}
+
+async function loadUrl(url,spec=null){
+  activeSceneSpec=spec||{id:'url:'+url,name:url,url,homeConfig:null,unverifiedUp:true};
+  currentFile=null;
+  currentUrl=url;
+  currentBytes=null;
+
+  try{
+    setLoading(true,"正在下载 3DGS 模型…");
+    loadingPercent.textContent="0%";
+    loadingBar.style.width="0%";
+    loadingBar.classList.remove("parsing");
+    loadingBytes.textContent="准备下载模型";
+
+    const bytes=await fetchBytesWithProgress(url);
+    currentBytes=bytes;
+
+    setParsingStage();
+
+    const fileName=(url.split("/").pop()||"splat.spz").split("?")[0];
+    return await addModel(
+      {fileBytes:bytes,fileName},
+      'scene:'+activeSceneSpec.id
+    );
+  }catch(e){
+    setLoading(false);
+    showError(e);
+    setStatus("模型加载失败。");
+    loadingOverlay.classList.remove("hidden");
+    loadingPercent.textContent="加载失败";
+    loadingBar.classList.remove("parsing");
+    loadingBar.style.width="0%";
+    loadingStage.textContent=e?.message||String(e);
+    loadingBytes.textContent="请检查网络后刷新页面重试";
+    return false;
+  }
+}
+
+async function tryAutoLoad(){
+  if(location.protocol==='file:'){
+    setLoading(false);
+    setStatus('Please use the .bat HTTP server launcher, not file://');
+    return;
+  }
+  const preferred=await loadSceneCatalog();
+  const custom=new URLSearchParams(location.search).get('url');
+  if(custom){
+    if(!/^models\/[\w./-]+\.(ply|spz|splat|ksplat|sog)$/i.test(custom) || custom.includes('..')){
+      setLoading(false);setStatus('Invalid model URL');return;
+    }
+    await switchToScene({id:'url:'+custom,name:custom,url:custom,homeConfig:null,unverifiedUp:true});
+    return;
+  }
+  if(preferred && await urlExists(preferred.url)){
+    await switchToScene(preferred);
+    return;
+  }
+  for(const entry of sceneCatalog){
+    if(await urlExists(entry.url)){
+      await switchToScene(entry);
+      return;
+    }
+  }
+  const oldFiles=['models/splat.spz','models/splat.ply'];
+  for(const u of oldFiles){
+    if(await urlExists(u)){
+      await switchToScene({id:'legacy:'+u,name:u,url:u,
+        homeConfig:u==='models/splat.spz'?'viewer_config.json':null,
+        unverifiedUp:true});
+      return;
+    }
+  }
+  setLoading(false);
+  dropEl.classList.remove('hidden');
+  loadingStage.textContent='No model file found';
+  setStatus('No model in models/. Choose local PLY/SPZ or copy the model into models/.');
+  setModelPanelOpen(true);
+}
+
+function resetHome(){
+  if(permanentConfig?.homeView&&applyView(permanentConfig.homeView)){
+    setStatus("已回到永久首页视角。");
+    return;
+  }
+
+  const local=loadLocalHome();
+  if(local&&applyView(local)){
+    setStatus("已回到浏览器保存的首页视角。");
+    return;
+  }
+
+  if(autoView){
+    applyView(autoView);
+    setStatus("已回到自动适配视角。");
+    return;
+  }
+
+  autoFrame();
+}
+
+// ========== 第一人称控制：-Z-up / Pitch ±65° / Roll 0 ==========
+const MAX_FP_PITCH=THREE.MathUtils.degToRad(45);
+
+let fpsYaw=0;
+let fpsPitch=0;
+
+const refForward=new THREE.Vector3();
+const refRight=new THREE.Vector3();
+const groundForward=new THREE.Vector3();
+const groundRight=new THREE.Vector3();
+const fpsForward=new THREE.Vector3();
+const tmp=new THREE.Vector3();
+
+const mouseSensitivity=.002;
+
+function buildGroundBasis(){
+  // -Z-up，因此 XY 平面是地面。
+  // 基准“前方”取 +Y，右侧由 forward × up 得到。
+  refForward.set(0,1,0);
+  refRight.crossVectors(refForward,SCENE_UP).normalize();
+}
+
+function initFpsFromCamera(){
+  buildGroundBasis();
+
+  camera.getWorldDirection(fpsForward).normalize();
+
+  const vertical=THREE.MathUtils.clamp(fpsForward.dot(SCENE_UP),-1,1);
+  fpsPitch=Math.asin(vertical);
+  fpsPitch=THREE.MathUtils.clamp(fpsPitch,-MAX_FP_PITCH,MAX_FP_PITCH);
+
+  groundForward.copy(fpsForward).addScaledVector(SCENE_UP,-vertical);
+
+  if(groundForward.lengthSq()<1e-8){
+    groundForward.copy(refForward);
+  }
+
+  groundForward.normalize();
+
+  fpsYaw=Math.atan2(
+    groundForward.dot(refRight),
+    groundForward.dot(refForward)
+  );
+
+  updateFpsRotation();
+}
+
+function updateFpsRotation(){
+  groundForward.copy(refForward)
+    .multiplyScalar(Math.cos(fpsYaw))
+    .addScaledVector(refRight,Math.sin(fpsYaw))
+    .normalize();
+
+  fpsForward.copy(groundForward)
+    .multiplyScalar(Math.cos(fpsPitch))
+    .addScaledVector(SCENE_UP,Math.sin(fpsPitch))
+    .normalize();
+
+  // 每一帧都重新使用 scene up + lookAt 建立正交相机，
+  // 因此不会积累 roll。
+  camera.up.copy(SCENE_UP);
+  camera.lookAt(tmp.copy(camera.position).add(fpsForward));
+}
+
+function enterFps(){
+  if(driveSim?.isActive())driveSim.stopDrive();
+  mode="fps";
+  orbit.enabled=false;
+  $("orbitBtn").classList.remove("active");
+  $("fpsBtn").classList.add("active");
+  crosshair.style.display="block";
+
+  initFpsFromCamera();
+  agvEditor.onViewModeChanged();
+
+  setStatus("第一人称：鼠标向右=视角向右；W/S 前后，A/D 左右，Space/Shift 上下；Pitch 硬限制 ±45°，Roll 锁死。");
+  updateModeHint();
+  updateMobileUi();
+  toast(IS_TOUCH?"已切换到手机漫游模式":"已切换到漫游模式");
+}
+
+function enterOrbit(){
+  if(document.pointerLockElement===canvas){
+    document.exitPointerLock();
+  }
+
+  mode="orbit";
+  orbit.enabled=true;
+
+  $("fpsBtn").classList.remove("active");
+  $("orbitBtn").classList.add("active");
+  crosshair.style.display="none";
+
+  camera.up.copy(SCENE_UP);
+
+  camera.getWorldDirection(tmp);
+  orbit.target.copy(camera.position).addScaledVector(
+    tmp,
+    Math.max(sceneRadius*.35,.5)
+  );
+
+  orbit.update();
+  agvEditor.onViewModeChanged();
+
+  setStatus("轨道模式：水平 360°；上下硬限制 ±55°；禁止翻转。");
+  resetJoystick();
+  mobileVertical=0;
+  updateModeHint();
+  updateMobileUi();
+  toast("已切换到轨道模式");
+}
+
+canvas.addEventListener("click",()=>{
+  if(mode==="fps"&&!driveSim.isActive()&&!IS_TOUCH&&document.pointerLockElement!==canvas){
+    canvas.requestPointerLock();
+  }
+});
+
+document.addEventListener("mousemove",e=>{
+  if(mode!=="fps"||document.pointerLockElement!==canvas)return;
+
+  fpsYaw+=e.movementX*mouseSensitivity;
+  fpsPitch-=e.movementY*mouseSensitivity;
+
+  const unclampedPitch = fpsPitch;
+
+  fpsPitch=THREE.MathUtils.clamp(
+    fpsPitch,
+    -MAX_FP_PITCH,
+    MAX_FP_PITCH
+  );
+
+  updateFpsRotation();
+
+  if (Math.abs(unclampedPitch) > MAX_FP_PITCH) {
+    setStatus(
+      `已到第一人称俯仰极限：${fpsPitch > 0 ? "+" : "-"}45°。` +
+      " 左右仍可 360° 转动。"
+    );
+  }
+});
+
+const keys=new Set();
+
+const driveSim=createAckermannDriveSim({
+  THREE,scene,camera,orbit,keys,
+  cad:ackermannCad,agvEditor,
+  getViewMode:()=>mode,enterOrbitMode:()=>enterOrbit(),
+  notify:message=>toast(message)
+});
+
+
+// ===== 手机摇杆 / 右侧滑动视角 =====
+let joystickX=0;
+let joystickY=0;
+let joystickPointerId=null;
+let joystickCenterX=0;
+let joystickCenterY=0;
+let joystickRadius=46;
+
+let lookPointerId=null;
+let lastLookX=0;
+let lastLookY=0;
+const touchLookSensitivity=.0040;
+
+let mobileVertical=0;
+
+function updateMobileUi(){
+  document.body.classList.toggle("mobile-fps",IS_TOUCH && mode==="fps");
+  if(IS_TOUCH && mode==="fps"){
+    $("modeHintText").innerHTML="<b>手机漫游</b> · 左侧摇杆移动 · 右侧滑动视角 · ↑/↓ 升降";
+  }
+}
+
+function resetJoystick(){
+  joystickX=0;
+  joystickY=0;
+  joystickPointerId=null;
+  joystickKnob.style.transform="translate(0px,0px)";
+}
+
+function updateJoystickFromPointer(e){
+  const dx=e.clientX-joystickCenterX;
+  const dy=e.clientY-joystickCenterY;
+  const len=Math.hypot(dx,dy);
+  const clamped=Math.min(len,joystickRadius);
+  const nx=len>0?dx/len:0;
+  const ny=len>0?dy/len:0;
+  const px=nx*clamped;
+  const py=ny*clamped;
+
+  joystickKnob.style.transform=`translate(${px}px,${py}px)`;
+
+  joystickX=px/joystickRadius;
+  joystickY=py/joystickRadius;
+
+  const dead=.12;
+  if(Math.abs(joystickX)<dead)joystickX=0;
+  if(Math.abs(joystickY)<dead)joystickY=0;
+}
+
+joystickWrap.addEventListener("pointerdown",e=>{
+  if(!IS_TOUCH || mode!=="fps")return;
+  joystickPointerId=e.pointerId;
+  const r=joystickWrap.getBoundingClientRect();
+  joystickCenterX=r.left+r.width/2;
+  joystickCenterY=r.top+r.height/2;
+  joystickRadius=Math.max(36,Math.min(r.width,r.height)*.36);
+  joystickWrap.setPointerCapture(e.pointerId);
+  updateJoystickFromPointer(e);
+  e.preventDefault();
+});
+
+joystickWrap.addEventListener("pointermove",e=>{
+  if(e.pointerId!==joystickPointerId)return;
+  updateJoystickFromPointer(e);
+  e.preventDefault();
+});
+
+for(const ev of ["pointerup","pointercancel","lostpointercapture"]){
+  joystickWrap.addEventListener(ev,e=>{
+    if(joystickPointerId===null || e.pointerId===joystickPointerId){
+      resetJoystick();
+    }
+  });
+}
+
+mobileLookZone.addEventListener("pointerdown",e=>{
+  if(!IS_TOUCH || mode!=="fps")return;
+  lookPointerId=e.pointerId;
+  lastLookX=e.clientX;
+  lastLookY=e.clientY;
+  mobileLookZone.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+
+mobileLookZone.addEventListener("pointermove",e=>{
+  if(e.pointerId!==lookPointerId || mode!=="fps")return;
+
+  const dx=e.clientX-lastLookX;
+  const dy=e.clientY-lastLookY;
+  lastLookX=e.clientX;
+  lastLookY=e.clientY;
+
+  fpsYaw+=dx*touchLookSensitivity;
+  fpsPitch-=dy*touchLookSensitivity;
+  fpsPitch=THREE.MathUtils.clamp(fpsPitch,-MAX_FP_PITCH,MAX_FP_PITCH);
+  updateFpsRotation();
+  e.preventDefault();
+});
+
+for(const ev of ["pointerup","pointercancel","lostpointercapture"]){
+  mobileLookZone.addEventListener(ev,e=>{
+    if(lookPointerId===null || e.pointerId===lookPointerId){
+      lookPointerId=null;
+    }
+  });
+}
+
+function bindHoldButton(id,value){
+  const el=$(id);
+  const stop=()=>{
+    mobileVertical=0;
+    el.classList.remove("active");
+  };
+  el.addEventListener("pointerdown",e=>{
+    if(!IS_TOUCH || mode!=="fps")return;
+    mobileVertical=value;
+    el.classList.add("active");
+    el.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  });
+  el.addEventListener("pointerup",stop);
+  el.addEventListener("pointercancel",stop);
+  el.addEventListener("lostpointercapture",stop);
+}
+bindHoldButton("mobileUpBtn",1);
+bindHoldButton("mobileDownBtn",-1);
+
+addEventListener("keydown",e=>{
+  const tag=(e.target?.tagName||"").toLowerCase();
+  const editing=tag==="input"||tag==="textarea"||tag==="select";
+
+  if(editing)return; // Typing form controls must never accelerate or steer AGV.
+  if(!editing && document.pointerLockElement!==canvas){
+    if(e.code==="KeyH"){ resetHome(); toast("已回到首页视角"); return; }
+    if(e.code==="Digit1"){ enterOrbit(); return; }
+    if(e.code==="Digit2"){ enterFps(); return; }
+    if(e.code==="KeyF"){ toggleFullscreen(); return; }
+    if(e.code==="KeyP"){ showIntro(); return; }
+    if(e.code==="KeyQ"){
+      if($("sharePanel").classList.contains("open")) closeShare();
+      else openShare();
+      return;
+    }
+  }
+
+  keys.add(e.code);
+
+  if([
+    "Space",
+    "KeyW","KeyA","KeyS","KeyD",
+    "ShiftLeft","ShiftRight"
+  ].includes(e.code)){
+    e.preventDefault();
+  }
+});
+
+addEventListener("keyup",e=>keys.delete(e.code));
+addEventListener("blur",()=>keys.clear());
+
+const clock=new THREE.Clock();
+
+function updateFpsMove(dt){
+  if(mode!=="fps")return;
+  if(!IS_TOUCH && document.pointerLockElement!==canvas)return;
+
+  const a=Number($("speed").value)*dt;
+
+  groundForward.copy(refForward)
+    .multiplyScalar(Math.cos(fpsYaw))
+    .addScaledVector(refRight,Math.sin(fpsYaw))
+    .normalize();
+
+  groundRight.crossVectors(groundForward,SCENE_UP).normalize();
+
+  // 桌面键盘
+  if(keys.has("KeyW"))camera.position.addScaledVector(groundForward,a);
+  if(keys.has("KeyS"))camera.position.addScaledVector(groundForward,-a);
+  if(keys.has("KeyA"))camera.position.addScaledVector(groundRight,-a);
+  if(keys.has("KeyD"))camera.position.addScaledVector(groundRight,a);
+
+  // 手机左侧摇杆：上推=前进，下拉=后退，左右=横移
+  let jx=joystickX;
+  let jy=joystickY;
+  const jmag=Math.hypot(jx,jy);
+  if(jmag>1){
+    jx/=jmag;
+    jy/=jmag;
+  }
+  if(jx!==0)camera.position.addScaledVector(groundRight,jx*a);
+  if(jy!==0)camera.position.addScaledVector(groundForward,-jy*a);
+
+  // -Z 就是现实“向上”
+  if(keys.has("Space"))camera.position.addScaledVector(SCENE_UP,a);
+  if(keys.has("ShiftLeft")||keys.has("ShiftRight")){
+    camera.position.addScaledVector(SCENE_UP,-a);
+  }
+
+  // 手机升降按钮
+  if(mobileVertical!==0){
+    camera.position.addScaledVector(SCENE_UP,mobileVertical*a);
+  }
+}
+
+// ========== SPZ ==========
+async function ensureBytes(){
+  if(currentBytes)return currentBytes;
+
+  if(currentFile){
+    currentBytes=new Uint8Array(await currentFile.arrayBuffer());
+    return currentBytes;
+  }
+
+  if(currentUrl){
+    setLoading(true,"正在读取当前模型...");
+
+    const r=await fetch(currentUrl);
+
+    if(!r.ok){
+      throw new Error("下载模型失败："+r.status);
+    }
+
+    currentBytes=new Uint8Array(await r.arrayBuffer());
+    return currentBytes;
+  }
+
+  throw new Error("没有模型。");
+}
+
+async function exportSpz(){
+  try{
+    setLoading(true,"正在转换 SPZ...");
+
+    const bytes=await ensureBytes();
+    const name=currentFile?.name||
+      (currentUrl?.split("/").pop().split("?")[0])||
+      "model.ply";
+
+    const out=await transcodeSpz({
+      inputs:[{fileBytes:bytes,pathOrUrl:name}],
+      maxSh:3,
+      fractionalBits:12,
+      opacityThreshold:0
+    });
+
+    const blob=new Blob(
+      [out.fileBytes],
+      {type:"application/octet-stream"}
+    );
+
+    const u=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+
+    a.href=u;
+    a.download=(name.replace(/\.[^.]+$/,"")||"model")+".spz";
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(u);
+
+    setLoading(false,"SPZ 导出完成。");
+  }catch(e){
+    setLoading(false);
+    showError(e);
+    setStatus("SPZ 导出失败。");
+  }
+}
+
+// ========== UI ==========
+const fileInput=$("fileInput");
+
+$("modelSwitchBtn").onclick=()=>setModelPanelOpen(!modelSwitchPanel.classList.contains('open'));
+$("modelSwitchCloseBtn").onclick=()=>setModelPanelOpen(false);
+$("modelApplyBtn").onclick=()=>{
+  const entry=sceneCatalog.find(x=>x.id===modelSceneSelect.value);
+  if(entry)void switchToScene(entry);
+};
+$("modelLocalBtn").onclick=()=>$("fileInput").click();
+$("projectBtn").onclick=showIntro;
+$("enterSceneBtn").onclick=hideIntro;
+$("shareBtn").onclick=()=>{
+  if($("sharePanel").classList.contains("open")) closeShare();
+  else openShare();
+};
+$("introShareBtn").onclick=()=>{hideIntro();openShare();};
+$("closeShareBtn").onclick=closeShare;
+$("copyLinkBtn").onclick=copyPublicLink;
+$("homeTopBtn").onclick=()=>{resetHome();toast("已回到首页视角");};
+$("settingsBtn").onclick=()=>{
+  setModelPanelOpen(false);
+  agvEditor.setPanelOpen(false);
+  ackermannCad.setPanelOpen(false);
+  driveSim.setPanelOpen(false);
+  settingsEl.classList.toggle("open");
+  $("settingsBtn").classList.toggle("active",settingsEl.classList.contains("open"));
+};
+$("openBtn").onclick=()=>fileInput.click();
+$("dropOpenBtn").onclick=()=>fileInput.click();
+$("dropCloseBtn").onclick=()=>dropEl.classList.add('hidden');
+addEventListener('keydown',e=>{if(e.key==='Escape')dropEl.classList.add('hidden');});
+
+fileInput.onchange=e=>{
+  const f=e.target.files?.[0];
+
+  if(f){
+    loadLocalFile(f);
+  }
+
+  fileInput.value="";
+};
+
+$("autoBtn").onclick=autoFrame;
+$("saveHomeBtn").onclick=saveHome;
+$("resetBtn").onclick=resetHome;
+$("exportHomeBtn").onclick=exportPermanentHome;
+$("clearHomeBtn").onclick=clearHome;
+
+$("orbitBtn").onclick=enterOrbit;
+$("fpsBtn").onclick=enterFps;
+
+$("dropBtn").onclick=()=>{
+  dropEl.classList.toggle("hidden");
+};
+
+$("exportSpzBtn").onclick=exportSpz;
+
+$("speed").oninput=()=>{
+  $("speedValue").textContent=
+    Number($("speed").value).toFixed(2);
+};
+
+async function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    await document.documentElement.requestFullscreen();
+  }else{
+    await document.exitFullscreen();
+  }
+}
+$("fullBtn").onclick=toggleFullscreen;
+
+addEventListener("dragover",e=>{
+  e.preventDefault();
+  if(Array.from(e.dataTransfer?.types||[]).includes('Files'))dropEl.classList.remove("hidden");
+});
+
+addEventListener("drop",e=>{
+  e.preventDefault();
+
+  const f=e.dataTransfer.files?.[0];
+
+  if(f){
+    loadLocalFile(f);
+  }
+});
+
+function resize(){
+  renderer.setSize(
+    innerWidth,
+    innerHeight,
+    false
+  );
+
+  camera.aspect=
+    innerWidth/innerHeight;
+
+  camera.updateProjectionMatrix();
+}
+
+addEventListener("resize",resize);
+
+let frames=0;
+let last=performance.now();
+
+renderer.setAnimationLoop(()=>{
+  const dt=Math.min(
+    clock.getDelta(),
+    .05
+  );
+
+  driveSim.tick(dt);
+  if(mode==="orbit"){
+    if(!driveSim.updateFollow(dt))orbit.update();
+  }else{
+    updateFpsMove(dt);
+  }
+
+  renderer.render(
+    scene,
+    camera
+  );
+
+  frames++;
+
+  const now=performance.now();
+
+  if(now-last>500){
+    const fps=Math.round(
+      frames*1000/(now-last)
+    );
+
+    frames=0;
+    last=now;
+
+    statsEl.textContent=
+      `FPS: ${fps}　`+
+      `模式: ${mode==="orbit"?"轨道":"第一人称"}　`+
+      `Up: -Z　`+
+      `相机: ${camera.position.x.toFixed(2)}, `+
+      `${camera.position.y.toFixed(2)}, `+
+      `${camera.position.z.toFixed(2)}`;
+
+    const pitchDeg = mode==="fps"
+      ? THREE.MathUtils.radToDeg(fpsPitch)
+      : 90 - THREE.MathUtils.radToDeg(orbit.getPolarAngle());
+
+    const limitDeg = mode==="fps" ? 45 : 55;
+    $("pitchReadout").textContent =
+      `Pitch: ${pitchDeg.toFixed(1)}° / ±${limitDeg}°`;
+  }
+});
+
+$("brandTitle").textContent=REPORT_TITLE;
+$("brandSub").textContent=REPORT_SUBTITLE;
+updateModeHint();
+updateMobileUi();
+// All imports, setup and event wiring have completed successfully.
+window.__agv55Boot.ready=true;
+console.info('AGV v5.5.4.2 + Ackermann kinematic simulator ready');
+tryAutoLoad();
+</script>
+</body>
+</html>

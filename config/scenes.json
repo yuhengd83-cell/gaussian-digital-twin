@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "defaultModel": "park2_rear_20261019",
+  "models": [
+    {
+      "id": "park2_rear_20261019",
+      "name": "park2 AGV 3DGS (SPZ)",
+      "url": "models/park2_splat.spz",
+      "kind": "gaussian_spz",
+      "splats": 918596,
+      "homeConfig": "config/home_park2_rear_20261019.json",
+      "unverifiedUp": true
+    },
+    {
+      "id": "office2",
+      "name": "会议室（旧模型）",
+      "url": "models/splat.spz",
+      "kind": "gaussian_spz",
+      "homeConfig": "viewer_config.json",
+      "unverifiedUp": false
+    }
+  ]
+}

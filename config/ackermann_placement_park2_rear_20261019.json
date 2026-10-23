@@ -1,0 +1,21 @@
+{
+  "schema": "ackermann-viewer-placement-v1",
+  "sceneModelId": "scene:park2_rear_20261019",
+  "pose": {
+    "x": 0.10827,
+    "y": -0.34869,
+    "groundZ": 0.006,
+    "yawDeg": 0,
+    "viewerUnitsPerMeter": 0.0738821,
+    "scaleSource": "from_route_pair",
+    "visible": true
+  },
+  "model": {
+    "url": "assets/ackermann/ackermann_urdf_meters.glb",
+    "unit": "m",
+    "wheelbase": 0.802603,
+    "frontTrack": 0.688
+  },
+  "calibrationStatus": "SCALE_FROM_SINGLE_FIELD_DISTANCE_2_26M_NOT_FULL_ROS_REGISTRATION",
+  "note": "Pose shown and accepted by user on 2026-10-19; reference scale from P1-P2 = 2.26 m, requires independent cross-check. No ROS map transform or collision geometry."
+}
