@@ -1,0 +1,61 @@
+{
+  "schema": "agv-georeference-v1",
+  "georefId": "epoch30_mesh_georef_20261015_utm50n",
+  "sceneFamily": "epoch30_20261015",
+  "crs": "WGS84_ECEF",
+  "meshLocalUp": "Z+",
+  "meshLocalUnit": "m",
+  "epsgMeshSource": "WGS84 / UTM zone 50N (EPSG:32650 3D promotion)",
+  "utmOriginENH": [
+    416686.37748772575,
+    4397342.391125577,
+    40.82210063934326
+  ],
+  "ecefOriginXYZMeters": [
+    -2155662.0609802078,
+    4414303.196004463,
+    4054309.0000406024
+  ],
+  "wgs84OriginLonLatEllipsoidalHeight": [
+    116.02791085765999,
+    39.72189211869999,
+    40.82210063748062
+  ],
+  "meshLocalToEcefColumnMajor": [
+    -0.8985803931386876,
+    -0.43880893002162286,
+    0.0,
+    0.0,
+    0.28042600291593245,
+    -0.5742483589249027,
+    0.7691554323806402,
+    0.0,
+    -0.3375122723032674,
+    0.691147990813353,
+    0.639061750411766,
+    0.0,
+    -2155662.0609802078,
+    4414303.196004463,
+    4054309.0000406024,
+    1.0
+  ],
+  "files": {
+    "metadataXmlSha256": "6713a33b770ed452caf5f8cd695d50d48d4c3cfac8392b23d6d32d204cecf3f0",
+    "rootTilesetJsonSha256": "f1e85de268108c75085836be615212dd71835648d3d9e5d444c979933360fb8c",
+    "meshPlySha256": "ac8b168dda3b2f02f88775eb1f6f1e85cb3928130b22a54079c3b74f6e668c19",
+    "meshGlbSha256": "bac421cebe819f335ea4139bdd7b8c607a579d023bf7867bbd7af7ead78cd518"
+  },
+  "provenance": "user_uploaded_epoch30_spz_and_mesh_export_metadata_tileset_user_asserted_correspondence",
+  "caveats": [
+    "File-internal georeference; not independently checked against field GNSS.",
+    "Only applies to corresponding meter-scale Mesh PLY source; Viewer-to-Mesh requires independent correspondence fit.",
+    "Ellipsoidal height (h), not mean sea level altitude.",
+    "Model identity is checked with the source SPZ SHA-256; SHA identity does not prove geometric alignment to Mesh.",
+    "The source SPZ belongs to this capture according to user-provided provenance; SPZ Viewer to Mesh similarity transform has NOT been established.",
+    "DO NOT apply this georeference to the previous park2_splat.ply scene with a different splat count."
+  ],
+  "sourceSpzName": "2026-10-15_10-31-41_3DGS_epoch_30.spz",
+  "sourceSpzSha256": "e332130c5c8ae17babcf013d135108e63146f3115ede3509d8d9cb23ea5f1f13",
+  "sourceSpzBytes": 29254747,
+  "sourceSpzGaussianCount": 1739253
+}
