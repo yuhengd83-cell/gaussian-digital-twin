@@ -1,0 +1,24 @@
+{
+  "schema": "ackermann-viewer-placement-v1",
+  "sceneModelId": "scene:epoch30_20261015",
+  "pose": {
+    "x": 0.46574,
+    "y": -12.63867,
+    "groundZ": 0.36558,
+    "yawDeg": 0,
+    "viewerUnitsPerMeter": 1.14309,
+    "scaleSource": "manual_unverified",
+    "visible": true
+  },
+  "model": {
+    "url": "assets/ackermann/ackermann_urdf_meters.glb",
+    "unit": "m",
+    "length": 1.413,
+    "width": 0.768,
+    "height": 1.153584,
+    "wheelbase": 0.802603,
+    "frontTrack": 0.688
+  },
+  "calibrationStatus": "UNVERIFIED_NEEDS_METRIC_SCENE_REGISTRATION",
+  "note": "CAD size is in metres, but viewerUnitsPerMeter requires measured reference points. Ground Z is a reference plane, not obstacle geometry."
+}

@@ -1,13 +1,33 @@
 {
-  "version": 1,
-  "defaultModel": "park2_rear_20261019",
+  "version": 2,
+  "defaultModel": "epoch30_20261015",
   "models": [
+    {
+      "id": "epoch30_20261015",
+      "name": "2026-10-15 epoch_30（地理参考场景）",
+      "url": "models/2026-10-15_10-31-41_3DGS_epoch_30.spz",
+      "kind": "gaussian_spz",
+      "splats": 1739253,
+      "sizeBytes": 29254747,
+      "sha256": "e332130c5c8ae17babcf013d135108e63146f3115ede3509d8d9cb23ea5f1f13",
+      "homeConfig": "config/home_epoch30_20261015.json",
+      "unverifiedUp": true,
+      "georeference": "config/epoch30_georeference.json"
+    },
     {
       "id": "park2_rear_20261019",
       "name": "park2 AGV 3DGS (SPZ)",
       "url": "models/park2_splat.spz",
       "kind": "gaussian_spz",
       "splats": 918596,
+      "identityStatus": "blocked",
+      "identityError": "Historical park2_splat.spz is byte-identical to epoch30 (1739253 splats), not the declared park2 model (918596). Loading as park2 is blocked pending verified replacement.",
+      "identityConflict": {
+        "observedSceneId": "epoch30_20261015",
+        "observedSplats": 1739253,
+        "declaredSplats": 918596,
+        "sha256": "e332130c5c8ae17babcf013d135108e63146f3115ede3509d8d9cb23ea5f1f13"
+      },
       "homeConfig": "config/home_park2_rear_20261019.json",
       "unverifiedUp": true
     },

@@ -1,0 +1,15 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),vm=require('node:vm');
+const root=path.resolve(__dirname,'..');
+const html=fs.readFileSync(path.join(root,'agv-test.html'),'utf8');
+const ids=['ros2Btn','ros2Panel','ros2Endpoint','ros2Token','ros2ConnState','ros2TopicList','ros2NodeList','ros2SubscribeBtn','ros2UnsubscribeBtn','ros2UnsubscribeAllBtn','ros2MsgPreview','ros2MsgStats'];
+for(const id of ids)assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).length,1,'missing or duplicated '+id);
+for(const id of ['projectBtn','homeTopBtn','orbitBtn','fpsBtn','fullBtn','modelSwitchBtn','agvBtn','ackermannBtn','driveBtn','geoBtn','agvMapOpenToolbar','shareBtn','settingsBtn'])assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).length,1,'base button regression '+id);
+assert(html.includes('src/ros2_receiver.js?v=5.5.8.4'));
+assert(html.includes('id="modelProofTitle">v5.5.8.4'));
+const js=fs.readFileSync(path.join(root,'src/ros2_receiver.js'),'utf8');new vm.Script(js);
+assert(js.includes("const PROTOCOL = 'agv-ros2-sub-v1'"));
+const cfg=JSON.parse(fs.readFileSync(path.join(root,'config/ros2_receiver.json'),'utf8'));
+assert(cfg.readOnly && cfg.ros2MotionBinding===false);
+assert(fs.existsSync(path.join(root,'tools/ros2_receiver_bridge.py')));
+assert(fs.existsSync(path.join(root,'tools/start_ros2_receiver_ubuntu.sh')));
+console.log('V5584_ROS2_UI_PASS: original buttons preserved, new IDs unique, readonly transport, deployment files present');

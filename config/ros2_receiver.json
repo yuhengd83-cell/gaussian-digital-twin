@@ -1,0 +1,13 @@
+{
+  "schema": "agv-ros2-receiver-config-v1",
+  "protocol": "agv-ros2-sub-v1",
+  "defaultWebSocketUrl": "ws://127.0.0.1:8765",
+  "webViewerPort": 8108,
+  "ros2BridgePort": 8765,
+  "readOnly": true,
+  "maxTopicsPerClient": 12,
+  "messagePreviewMaxChars": 12000,
+  "ros2MotionBinding": false,
+  "receiverDevice": "Ackermann CAD yellow box (semantic label only)",
+  "security": "Loopback by default. For trusted LAN bind require a token, firewall restrictions and explicit WS IP. Do not expose raw WebSocket on public Internet."
+}

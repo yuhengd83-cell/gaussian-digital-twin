@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>AGV Digital Twin v5.5.4.2 - Driving Simulation</title>
+<title>AGV Digital Twin v5.5.8.4 - ROS2 Read-only Receiver (v5.5.8.3 Stable Base)</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#fff;font-family:"Microsoft YaHei",Inter,system-ui,sans-serif}
@@ -438,7 +438,7 @@ body.mobile-fps #modeHint{display:none}
 @media(max-width:760px){#drivePanel{top:128px;right:8px;width:calc(100vw - 16px);max-height:calc(100vh - 140px)}#toolbar{top:70px;right:8px;gap:3px}#toolbar .toolbtn{padding:7px 7px;font-size:10px}}
 
 
-/* v5.5.4.2 - nonblocking auto-route confirmation */
+/* v5.5.4.4 - nonblocking auto-route confirmation */
 #driveAutoConfirmOverlay {position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(5,9,15,.68);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
 #driveAutoConfirmOverlay.open {display:flex}
 #driveAutoConfirmCard {width:min(510px,calc(100vw - 30px));background:#161d27;border:1px solid #435267;border-radius:15px;padding:21px 24px;color:#f5f7fa;box-shadow:0 22px 72px rgba(0,0,0,.44)}
@@ -449,7 +449,7 @@ body.mobile-fps #modeHint{display:none}
 #driveAutoConfirmCard .driveAutoActions button {padding:9px 15px;border:1px solid #65788b;border-radius:8px;background:#283343;color:white;cursor:pointer}
 #driveAutoConfirmCard #driveAutoConfirmStart {background:#1e67b7;border-color:#418fe4}
 
-/* v5.5.4.2: gradient-thick tracks; appearance is visual only */
+/* v5.5.4.4: gradient-thick tracks; appearance is visual only */
 .traceStyleBlock{margin:11px 0 12px;padding:10px 12px;border-radius:10px;background:rgba(47,65,91,.29);border:1px solid rgba(160,192,224,.18)}
 .traceStyleHeading{font-size:12px;font-weight:700;color:#edf5ff;margin-bottom:8px}
 .traceStyleRow{display:flex;align-items:center;gap:10px;margin:9px 0}
@@ -461,6 +461,369 @@ body.mobile-fps #modeHint{display:none}
 .tracePlanSwatch{background:linear-gradient(90deg,#00d9ff,#397cff,#be6aff,#ffad38)}
 .traceTrailSwatch{background:linear-gradient(90deg,#3ffa86,#3fece3,#f7e64d,#ff6764)}
 .traceStyleNote{font-size:10px;line-height:1.55;color:#a9bdce;margin-top:5px}
+
+/* v5.5.5 — circular live minimap and full-size top-view route editor. */
+#agvMiniDock{position:fixed;z-index:42;top:112px;right:18px;width:182px;height:182px;display:none;overflow:hidden;border-radius:50%;padding:0;border:3px solid rgba(124,189,249,.9);background:#17212b;box-shadow:0 10px 32px rgba(0,0,0,.5),0 0 0 5px rgba(12,20,33,.32);cursor:zoom-in;touch-action:manipulation}
+#agvMiniDock:hover{border-color:#fff;box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 5px rgba(104,170,244,.20)}
+#agvMiniCanvas{display:block;width:100%;height:100%;border-radius:50%}
+#agvMiniLabel{position:absolute;bottom:0;left:0;right:0;display:block;padding:7px 2px 9px;background:linear-gradient(0deg,rgba(0,0,0,.83),rgba(0,0,0,0));font-size:10px;letter-spacing:.08em;color:#f2f8ff;text-align:center;pointer-events:none}
+#agvMapOverlay{position:fixed;z-index:88;inset:0;display:none;align-items:center;justify-content:center;padding:15px;background:rgba(5,10,18,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#agvMapOverlay.open{display:flex}
+#agvMapDialog{position:relative;width:min(1080px,98vw);max-height:96vh;display:flex;flex-direction:column;padding:16px;border-radius:18px;background:rgba(17,25,36,.97);border:1px solid rgba(166,206,247,.30);box-shadow:0 25px 90px rgba(0,0,0,.55)}
+.agvMapHeader{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:9px}
+.agvMapHeader h2{margin:0;font-size:18px;font-weight:750}
+#agvMapSceneInfo{font-size:11px;line-height:1.55;color:#a8c0d3;max-width:850px;margin-top:5px;word-break:break-all}
+#agvMapStatus{font-size:11px;line-height:1.55;color:#92e4d0;margin:7px 0}
+.agvMapTools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.agvMapTool{border-radius:8px;cursor:pointer;background:#223148;color:#e7f4ff;padding:7px 10px;border:1px solid #425874;font-size:12px}
+.agvMapTool:hover{background:#314462}
+.agvMapTool.active{background:#245a93;border-color:#77b9ff}
+#agvMapViewport{display:flex;align-items:center;justify-content:center;min-height:0;flex:1;overflow:hidden}
+#agvMapCanvas{display:block;width:min(calc(97vh - 195px),calc(98vw - 32px),880px);height:auto;max-height:none;aspect-ratio:1/1;object-fit:contain;border-radius:12px;background:#17212b;border:1px solid rgba(201,229,251,.25);cursor:crosshair;touch-action:none;user-select:none;box-shadow:0 8px 28px #0006}
+.agvMapFoot{margin-top:8px;font-size:11px;line-height:1.55;color:#a8b5c5}
+.agvMapLegend{display:inline-flex;align-items:center;gap:5px;margin-right:13px;white-space:nowrap}
+.agvMapDot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.agvMapCameraOption{cursor:pointer;color:#9fb6cf}.agvMapCameraOption input{accent-color:#58a8ff;cursor:pointer}
+@media(max-width:1070px){#agvMiniDock{top:149px;right:15px;width:154px;height:154px}}
+@media(max-width:760px){#agvMiniDock{top:139px;right:12px;width:126px;height:126px;border-width:2px}#agvMiniLabel{font-size:9px;padding-bottom:5px}#agvMapDialog{width:calc(100vw - 14px);padding:10px;max-height:98vh}#agvMapOverlay{padding:7px}.agvMapHeader h2{font-size:15px}.agvMapTool{font-size:11px;padding:6px 8px}#agvMapCanvas{width:min(calc(100vw - 38px),calc(98vh - 265px));max-height:none}.agvMapFoot{font-size:10px}}
+
+
+/* v5.5.7: geographic reference / 3D point-correspondence panel */
+#geoPanel{position:fixed;z-index:50;top:132px;right:18px;width:min(550px,calc(100vw - 28px));max-height:calc(100vh - 145px);overflow:auto;display:none;padding:15px 16px;border-radius:15px;background:rgba(14,22,34,.95);border:1px solid rgba(135,185,237,.35);box-shadow:0 20px 70px rgba(0,0,0,.56)}
+#geoPanel.open{display:block}
+#geoPanel h3{font-size:15px;margin:0;color:#f2f7ff}
+.geoTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.geoNotice{font-size:11px;line-height:1.65;color:#f1d3a4;padding:9px 10px;background:rgba(161,103,36,.17);border:1px solid rgba(223,174,88,.24);border-radius:9px;margin-bottom:10px}
+.geoHead{font-size:12px;font-weight:700;color:#c4e6ff;margin:16px 0 7px}
+.geoValue{font-size:11px;line-height:1.7;background:rgba(255,255,255,.055);padding:9px 10px;border-radius:8px;color:#ecf2f9;overflow-wrap:anywhere}
+.geoCaption{font-size:10px;line-height:1.6;color:#aec0cf;margin:8px 0}
+.geoButtons{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.geoButtons button{border:1px solid #54718b;background:#223448;border-radius:7px;color:#f0f6ff;padding:7px 9px;font-size:11px;cursor:pointer}
+.geoButtons button:disabled{opacity:.35;cursor:not-allowed}
+.geoButtons button:hover:not(:disabled){background:#2a5676}
+.geoButtons .geoPrimary{background:#176092;border-color:#3687be}
+#geoPairList{display:flex;flex-direction:column;gap:9px;margin-top:9px}
+.geoPoint{border:1px solid rgba(150,182,210,.22);border-radius:10px;background:rgba(31,45,65,.58);padding:9px 10px}
+.geoPointHeader{display:flex;align-items:center;gap:5px;margin-bottom:9px}
+.geoPointHeader b{color:#98d7ef;font-size:11px}
+.geoName{min-width:0;flex:1;background:#1b2b3e;border:1px solid #3f5870;border-radius:5px;color:#fff;padding:6px;font-size:11px}
+.geoRole{width:98px;background:#1d2b3b;border:1px solid #42576b;border-radius:5px;color:#fff;font-size:11px;padding:6px}
+.geoInputGrid{display:grid;grid-template-columns:95px repeat(3,minmax(0,1fr));gap:5px;align-items:center;margin:5px 0}
+.geoInputGrid>span{font-size:10px;color:#a5c5dc}
+.geoCoord{display:flex;min-width:0;gap:2px;align-items:center}
+.geoCoord>span{font-size:9px;color:#82a8c9}
+.geoCoord>input{min-width:0;width:100%;padding:5px 4px;border:1px solid #44627d;background:#162839;color:#f3faff;border-radius:5px;font:11px ui-monospace,Consolas,monospace}
+.geoPointButtons{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.geoPointButtons button{font-size:10px}
+#geoMaxError{background:#203045;color:#fff;border:1px solid #60809a;border-radius:6px;padding:7px;width:85px}
+#geoMessage{font-size:11px;line-height:1.65;padding:9px 10px;background:rgba(52,134,112,.20);border:1px solid rgba(82,184,163,.3);border-radius:8px;color:#c2f3e6;margin:9px 0}
+#geoMessage.geoBad{background:rgba(164,66,52,.18);border-color:rgba(241,128,107,.35);color:#ffc8b8}
+#geoVehicleCoords{font-size:11px;line-height:1.55;color:#a6f4d6;font-variant-numeric:tabular-nums;margin:8px 0}
+#geoDriveReadout{white-space:normal!important;font-size:11px;margin-top:7px;color:#97e5c2;line-height:1.5}
+#agvMapGeoStatus{font-size:11px;color:#9ee3ca;line-height:1.55;margin-top:5px}
+@media(max-width:1070px){#geoPanel{top:149px;max-height:calc(100vh - 156px);right:8px}}
+@media(max-width:760px){#geoPanel{top:139px;right:8px;width:calc(100vw - 16px);max-height:calc(100vh - 149px)}.geoInputGrid{grid-template-columns:75px repeat(3,minmax(0,1fr));gap:3px}.geoRole{width:85px}.geoCoord>input{font-size:10px}}
+
+#modelProof{position:fixed;left:18px;bottom:18px;z-index:18;width:min(450px,calc(100vw - 36px));box-sizing:border-box;padding:10px 12px;border:1px solid #5680a6;border-radius:11px;background:rgba(11,18,29,.89);backdrop-filter:blur(8px);box-shadow:0 5px 28px rgba(0,0,0,.35);font:12px/1.5 system-ui,Arial,sans-serif;color:#e5effa;pointer-events:none}
+#modelProof strong{display:block;color:#d2ebff;letter-spacing:.2px}
+#modelProofInfo{display:block;overflow-wrap:anywhere;white-space:normal;color:#bfd0df}
+#modelProof[data-proof="ok"]{border-color:#39b68f}
+#modelProof[data-proof="warn"]{border-color:#eab264}
+#modelProof[data-proof="bad"]{border-color:#e06969}
+@media(max-width:700px){#modelProof{left:9px;bottom:8px;width:min(370px,calc(100vw - 18px));font-size:10px;padding:7px 9px}}
+
+/* ===== v5.5.8.1 — four always-visible collapsible toolbar groups ===== */
+:root{--nav-panel-top:188px;--nav-accent:#4b97f3}
+#brand{
+  top:12px!important;left:14px!important;right:auto!important;
+  border-color:rgba(146,196,249,.20);background:rgba(10,19,31,.90);
+  box-shadow:0 6px 22px rgba(0,0,0,.22);z-index:39
+}
+#toolbar{
+  position:fixed!important;top:98px!important;left:14px!important;right:14px!important;
+  max-width:none!important;width:auto!important;box-sizing:border-box;
+  z-index:45!important;display:grid!important;
+  grid-template-columns:minmax(210px,1.12fr) minmax(156px,.80fr) minmax(286px,1.40fr) minmax(236px,1.08fr)!important;
+  align-items:start!important;justify-items:stretch!important;
+  gap:7px!important;padding:7px 9px!important;border-radius:15px!important;
+  background:linear-gradient(110deg,rgba(13,27,45,.95),rgba(12,20,33,.94))!important;
+  border:1px solid rgba(94,161,236,.30)!important;
+  box-shadow:0 10px 36px #0007,0 0 0 1px rgba(106,177,255,.04)!important;
+}
+#toolbar .navGroup{
+  display:flex!important;flex-direction:column!important;align-self:start!important;min-width:0;
+  gap:5px;padding:6px 7px;border:1px solid rgba(131,174,227,.12);
+  border-radius:11px;background:linear-gradient(160deg,rgba(41,60,86,.36),rgba(15,25,43,.33));
+  transition:background .16s,border-color .16s;
+}
+#toolbar .navGroup:hover{border-color:rgba(128,179,235,.30)}
+#toolbar .navGroup.has-active{border-color:rgba(91,154,230,.36)}
+#toolbar .navGroupHeader{
+  display:flex;align-items:center;justify-content:space-between;gap:7px;
+  width:100%;min-height:24px;padding:0 1px;
+}
+#toolbar .navGroupLabel{
+  min-width:0;font-size:10.5px;line-height:15px;font-weight:650;
+  letter-spacing:.045em;color:#a6c7ee;padding:0 4px;white-space:nowrap
+}
+#toolbar .navGroupToggle{
+  flex:0 0 25px;min-width:25px;width:25px;height:24px;
+  display:inline-grid;place-items:center;cursor:pointer;
+  border:1px solid rgba(150,191,243,.28);border-radius:7px;
+  background:rgba(57,100,150,.19);color:#d3eaff;
+  font-size:16px;line-height:18px;font-weight:600;padding:0;
+  transition:background .16s,border-color .16s;
+}
+#toolbar .navGroupToggle:hover{background:rgba(62,129,215,.39);border-color:#83b9ff}
+#toolbar .navGroupToggle:focus-visible,#toolbar .toolbtn:focus-visible{outline:2px solid #a7d8ff;outline-offset:2px}
+#toolbar .navGroupToggle .navChevron{display:inline-block;transform:translateY(-1px)}
+#toolbar .navGroup.is-collapsed{background:linear-gradient(160deg,rgba(36,51,74,.28),rgba(13,24,42,.27))}
+#toolbar .navGroup.is-collapsed .navGroupToggle{background:rgba(40,92,151,.32)}
+#toolbar .navButtons{display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-width:0}
+#toolbar .navButtons[hidden]{display:none!important}
+#toolbar .toolbtn{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  flex:0 0 auto;min-width:0;min-height:34px;height:34px;padding:5px 8px!important;
+  font-size:11px!important;font-weight:550;letter-spacing:.005em;line-height:1.1;
+  white-space:nowrap;border:1px solid rgba(157,190,229,.20)!important;
+  border-radius:8px!important;color:#e6eef9!important;
+  background:linear-gradient(180deg,rgba(65,82,109,.27),rgba(37,51,75,.27))!important;
+  transition:background .16s,border-color .16s,box-shadow .16s,transform .16s;
+}
+#toolbar .toolbtn:hover{background:rgba(83,126,185,.33)!important;border-color:rgba(127,183,255,.60)!important;transform:translateY(-1px)}
+#toolbar .toolbtn.active{
+  background:linear-gradient(180deg,rgba(42,117,224,.85),rgba(27,69,146,.9))!important;
+  border-color:var(--nav-accent)!important;
+  box-shadow:inset 0 1px 0 #ffffff20,0 0 16px #398de853!important;color:#fff!important
+}
+#toolbar .navIcon{flex:0 0 15px;width:15px;height:15px;stroke:currentColor}
+#toolbar .navLabel{white-space:nowrap}
+#navUiVersion{position:absolute;right:13px;top:-20px;font:10px/15px system-ui,sans-serif;color:#a9ccee;letter-spacing:.04em}
+:is(#settings,#sharePanel,#modelSwitchPanel,#agvPanel,#ackermannPanel,#drivePanel,#geoPanel){
+  top:var(--nav-panel-top)!important;
+  max-height:max(110px,calc(100dvh - var(--nav-panel-top) - 12px))!important;
+}
+#agvMiniDock{top:var(--nav-panel-top)!important;right:18px!important}
+@media(max-width:1080px){
+  #toolbar{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #toolbar .navGroup{padding:5px 7px}
+  #toolbar .toolbtn{padding:5px 7px!important;font-size:10.5px!important}
+}
+@media(max-width:760px){
+  #brand{top:9px!important;left:8px!important;max-width:calc(100vw - 16px)!important;min-height:56px!important}
+  #toolbar{
+    top:82px!important;left:8px!important;right:8px!important;padding:6px!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:5px!important;max-height:min(50dvh,390px);overflow-y:auto;overflow-x:hidden
+  }
+  #toolbar .navGroup{min-width:0;padding:5px!important}
+  #toolbar .navGroupLabel{font-size:10px!important;padding:0 1px!important;letter-spacing:0}
+  #toolbar .navGroupToggle{min-width:24px;width:24px;height:23px;flex-basis:24px}
+  #toolbar .navButtons{gap:3px;flex-wrap:wrap!important}
+  #toolbar .toolbtn{padding:5px 6px!important;font-size:10px!important;min-height:31px;height:31px}
+  #toolbar .navIcon{width:13px;height:13px;flex-basis:13px}
+  #navUiVersion{display:none}
+  #agvMiniDock{width:118px!important;height:118px!important;right:9px!important}
+  :is(#settings,#sharePanel,#modelSwitchPanel,#agvPanel,#ackermannPanel,#drivePanel,#geoPanel){right:8px!important;max-width:calc(100vw - 16px)!important}
+}
+@media(max-width:370px){
+  #brandTitle{font-size:11px!important}
+  #toolbar .navGroupLabel{font-size:9.5px!important}
+  #toolbar .toolbtn{padding:4px 5px!important;font-size:9.5px!important}
+}
+
+
+/* ===== v5.5.8.2 — four ultra-compact dropdowns beside the CRCC brand ===== */
+:root{--brand-right:389px;--nav-panel-top:92px}
+#brand{
+  top:10px!important;left:10px!important;min-height:64px!important;
+  padding:6px 12px 6px 7px!important;z-index:46!important;
+  max-width:min(380px,42vw)!important;
+}
+#brandLogoBox{width:55px!important;height:50px!important}
+#brandLogo{width:51px!important;height:47px!important}
+#brandText{min-width:0!important}
+#brandTitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px!important}
+#brandSub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px!important}
+#toolbar{
+  top:12px!important;left:calc(var(--brand-right) + 9px)!important;right:auto!important;
+  width:max-content!important;max-width:calc(100vw - var(--brand-right) - 20px)!important;
+  display:flex!important;flex-direction:row!important;align-items:stretch!important;
+  justify-content:space-between!important;flex-wrap:nowrap!important;
+  gap:5px!important;padding:5px!important;min-height:58px!important;
+  max-height:58px!important;overflow:visible!important;
+  border-radius:13px!important;z-index:45!important;
+}
+#toolbar .navGroup{
+  position:relative!important;flex:0 0 auto!important;min-width:0!important;
+  display:flex!important;flex-direction:column!important;align-self:stretch!important;
+  padding:5px 6px!important;gap:0!important;
+  border-radius:9px!important;
+}
+#toolbar .navGroup:nth-child(1){width:110px!important}
+#toolbar .navGroup:nth-child(2){width:103px!important}
+#toolbar .navGroup:nth-child(3){width:130px!important}
+#toolbar .navGroup:nth-child(4){width:125px!important}
+#toolbar .navGroup:has(.navButtons:not([hidden])){z-index:2}
+#toolbar .navGroupHeader{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  width:100%;height:100%;min-height:40px!important;gap:3px!important;padding:0!important;
+}
+#toolbar .navGroupLabel{
+  flex:1;min-width:0;font-size:clamp(9px,1vw,11px)!important;
+  letter-spacing:0!important;white-space:nowrap!important;
+  overflow:hidden;text-overflow:ellipsis;padding:0 1px!important;
+}
+#toolbar .navGroupToggle{
+  flex:0 0 22px!important;min-width:22px!important;width:22px!important;
+  height:26px!important;font-size:15px!important;border-radius:6px!important;
+}
+#toolbar .navButtons{
+  position:absolute!important;top:calc(100% + 9px)!important;
+  left:0!important;right:auto!important;
+  min-width:176px!important;width:max-content!important;
+  max-width:min(300px,calc(100vw - 24px))!important;
+  display:flex!important;flex-direction:column!important;
+  flex-wrap:nowrap!important;align-items:stretch!important;gap:5px!important;
+  max-height:calc(100dvh - var(--nav-panel-top) - 20px)!important;
+  overflow-y:auto!important;overflow-x:hidden!important;
+  padding:9px!important;
+  border:1px solid rgba(116,170,236,.42)!important;border-radius:12px!important;
+  background:linear-gradient(155deg,rgba(23,37,56,.98),rgba(10,18,31,.98))!important;
+  box-shadow:0 16px 38px rgba(0,0,0,.58),0 0 0 1px #99c9ff0d!important;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+#toolbar .navGroup--vehicle .navButtons{min-width:220px!important}
+#toolbar .navGroup--application .navButtons{left:auto!important;right:0!important}
+#toolbar .navButtons[hidden]{display:none!important}
+#toolbar .navButtons .toolbtn{
+  justify-content:flex-start!important;width:100%!important;
+  min-height:37px!important;height:37px!important;padding:7px 11px!important;
+  font-size:12px!important;text-align:left;
+}
+#navUiVersion{display:none!important}
+/* A freely draggable floating minimap; viewport-local X/Y are managed by JS. */
+#agvMiniDock{
+  top:var(--mini-top,var(--nav-panel-top))!important;
+  left:var(--mini-left,auto)!important;
+  right:var(--mini-right,16px)!important;
+  cursor:grab!important;touch-action:none!important;user-select:none!important;
+  -webkit-user-select:none!important;
+}
+#agvMiniDock[data-dragging="true"]{cursor:grabbing!important;box-shadow:0 18px 38px #0009,0 0 0 5px #66b9ff35!important}
+#agvMiniDock #agvMiniCanvas{pointer-events:none}
+#agvMiniLabel{pointer-events:none}
+:is(#settings,#sharePanel,#modelSwitchPanel,#agvPanel,#ackermannPanel,#drivePanel,#geoPanel){
+  top:var(--nav-panel-top)!important;
+  max-height:max(100px,calc(100dvh - var(--nav-panel-top) - 10px))!important;
+}
+@media(max-width:940px){
+  #brand{max-width:36vw!important}
+  #brandTitle{font-size:12px!important}
+  #brandSub{font-size:9px!important}
+  #toolbar{gap:4px!important}
+  #toolbar .navGroup{padding:4px!important}
+  #toolbar .navGroup:nth-child(1){width:105px!important}
+  #toolbar .navGroup:nth-child(2){width:95px!important}
+  #toolbar .navGroup:nth-child(3){width:120px!important}
+  #toolbar .navGroup:nth-child(4){width:120px!important}
+  #toolbar .navGroupLabel{font-size:10px!important}
+}
+@media(min-width:681px) and (max-width:800px){
+  #toolbar{width:calc(100vw - var(--brand-right) - 20px)!important}
+  #toolbar .navGroup{flex:1 1 0!important;width:auto!important}
+}
+@media(max-width:680px){
+  /* Only the CRCC mark is kept to give four permanent groups a single row. */
+  #brand{left:5px!important;top:7px!important;min-height:55px!important;
+    width:56px!important;max-width:56px!important;padding:5px!important;gap:0!important}
+  #brandText{display:none!important}
+  #brandLogoBox{width:44px!important;height:44px!important}
+  #brandLogo{width:42px!important;height:42px!important}
+  #toolbar{top:7px!important;right:5px!important;gap:2px!important;
+    width:calc(100vw - var(--brand-right) - 14px)!important;
+    min-height:55px!important;max-height:55px!important;padding:4px!important}
+  #toolbar .navGroup{flex:1 1 0!important;width:auto!important}
+  #toolbar .navGroup{padding:2px 3px!important}
+  #toolbar .navGroupHeader{gap:1px!important;min-height:42px!important}
+  #toolbar .navGroupLabel{font-size:9px!important;padding:0!important}
+  #toolbar .navGroupToggle{width:19px!important;min-width:19px!important;flex-basis:19px!important;height:23px!important}
+  #toolbar .navButtons{min-width:155px!important;padding:6px!important}
+  #toolbar .navGroup--vehicle .navButtons{min-width:180px!important}
+  #agvMiniDock{width:120px!important;height:120px!important}
+}
+@media(max-width:395px){
+  #toolbar{overflow:visible!important}
+  #toolbar .navGroup{min-width:0!important}
+  #toolbar .navGroupLabel{font-size:8.5px!important}
+}
+
+
+/* v5.5.8.4 — Yellow equipment ROS2 read-only subscriber panel. */
+#ros2Btn .ros2Led{width:7px;height:7px;border-radius:50%;margin-left:auto;background:#8695aa;box-shadow:0 0 0 2px #73859b21}
+#ros2Btn .ros2Led[data-mode="online"]{background:#56e1a7;box-shadow:0 0 0 3px #56e1a71d,0 0 9px #56e1a7}
+#ros2Btn .ros2Led[data-mode="demo"]{background:#f4c45f;box-shadow:0 0 8px #f4c45f}
+#ros2Btn .ros2Led[data-mode="connecting"]{background:#66acff;animation:ros2Pulse 1s ease-in-out infinite alternate}
+@keyframes ros2Pulse{from{opacity:.5}to{opacity:1}}
+#ros2Panel{display:none;position:fixed;z-index:58;right:15px;top:var(--nav-panel-top,95px);
+  width:min(485px,calc(100vw - 24px));max-height:calc(100dvh - var(--nav-panel-top,95px) - 10px);
+  overflow:auto;padding:16px;color:#f4f8ff;border-radius:15px;overscroll-behavior:contain;
+  background:linear-gradient(160deg,rgba(17,29,44,.98),rgba(11,18,29,.97));
+  border:1px solid rgba(117,162,211,.48);box-shadow:0 22px 60px #0009,0 0 0 1px #4774b119}
+#ros2Panel.open{display:block}
+#ros2Panel .ros2Heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#ros2Panel h3{font-size:16px;margin:0;font-weight:750}
+#ros2Panel .ros2Close{font-size:12px;color:#d3e8ff;padding:5px 11px;background:#344b69a6;border:1px solid #6987ad;border-radius:7px;cursor:pointer}
+#ros2Panel .ros2Equipment{margin:12px 0;padding:10px;border-radius:10px;border:1px solid #c89d4e66;
+  background:linear-gradient(120deg,#76551633,#1a2b3a73);display:flex;align-items:center;gap:9px}
+#ros2Panel .ros2Yellow{font-size:17px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #f9c955aa;
+  color:#f4cf71;background:#d9a63a44;border-radius:6px;flex-shrink:0;width:29px;height:29px}
+#ros2Panel .ros2Equipment p{font-size:11px;line-height:1.5;margin:3px 0 0;color:#b5c7da}
+#ros2Panel .ros2StatusLine{display:flex;justify-content:space-between;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:#9fb6d3;margin:7px 0}
+#ros2ConnState{background:#243950;border:1px solid #55708a;border-radius:999px;padding:5px 10px;color:#b5cbe1;font-size:11px}
+#ros2ConnState[data-mode="online"]{color:#8af4bf;border-color:#399b71;background:#15523c4d}
+#ros2ConnState[data-mode="connecting"]{color:#aad4ff;border-color:#538ec3}
+#ros2ConnState[data-mode="demo"]{color:#ffce79;border-color:#b88a3d;background:#69470b43}
+#ros2Panel .ros2Field{display:flex;flex-direction:column;gap:5px;margin:9px 0;font-size:11px;color:#b7c6db}
+#ros2Panel input[type="text"],#ros2Panel input[type="password"],#ros2Panel input[type="search"],#ros2Panel select{
+  background:#152538;color:#edf6ff;border:1px solid #3b5676;border-radius:7px;padding:9px 10px;min-width:0;font-size:12px;outline:none;}
+#ros2Panel input:focus-visible,#ros2Panel button:focus-visible,#ros2Panel select:focus-visible{outline:2px solid #91c4ff;outline-offset:2px}
+#ros2Panel .ros2Fields{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:9px}
+#ros2Panel .ros2Actions{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+#ros2Panel button.ros2Action,#ros2Panel .ros2SmallBtn{cursor:pointer;color:#e7f2ff;background:#223851;border:1px solid #517294;
+  border-radius:7px;padding:7px 10px;font-size:11px;font-weight:650}
+#ros2Panel button.ros2Action:hover,#ros2Panel .ros2SmallBtn:hover{background:#355778}
+#ros2Panel button.ros2Action.primary{background:#205b95;border-color:#4b9be5}
+#ros2Panel button.ros2Action:disabled{opacity:.4;cursor:default}
+#ros2Info{font-size:11px;line-height:1.55;background:#183b4555;border:1px solid #40808d88;
+  color:#a9e4e4;border-radius:9px;padding:9px;min-height:34px;word-break:break-word}
+#ros2Info.ros2Error{background:#723d335c;border-color:#d97969aa;color:#ffb4a7}
+#ros2Panel .ros2Tabs{display:flex;gap:6px;margin-top:13px;border-bottom:1px solid #5b779966;padding-bottom:7px}
+#ros2Panel .ros2Tabs button{border:1px solid #456382;background:#1c3047;color:#adc2d7;border-radius:7px;padding:8px 15px;cursor:pointer;font-size:12px}
+#ros2Panel .ros2Tabs button.active{background:#255c96;color:#fff;border-color:#68adff}
+#ros2Panel [hidden]{display:none!important}
+#ros2Panel .ros2Counts{display:flex;justify-content:space-between;flex-wrap:wrap;color:#a9bfd8;font-size:11px;margin:9px 0}
+#ros2Panel .ros2Results{max-height:min(245px,35dvh);overflow:auto;border-radius:9px;border:1px solid #3e5b7a;background:#101d2bc4}
+#ros2Panel .ros2TopicRow{display:flex;align-items:center;gap:9px;padding:10px;cursor:pointer;border-bottom:1px solid #47628055}
+#ros2Panel .ros2TopicRow:last-child{border-bottom:0}
+#ros2Panel .ros2TopicRow:hover{background:#29456670}
+#ros2Panel .ros2TopicRow input{width:16px;height:16px;accent-color:#65bcff;flex-shrink:0}
+#ros2Panel .ros2TopicDesc{display:flex;flex-direction:column;min-width:0;flex:1;gap:4px;overflow-wrap:anywhere}
+#ros2Panel .ros2TopicDesc strong{font-size:12px;font-weight:650}
+#ros2Panel .ros2TopicDesc small,#ros2Panel .ros2NodeRow small{font-size:10px;color:#95aecb}
+#ros2Panel .ros2TopicRight{display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0}
+#ros2Panel .ros2TopicRight span{font-size:10px;color:#a3b4c9}
+#ros2Panel .ros2TopicRight span.ros2Subscribed{color:#6cebb5}
+#ros2Panel .ros2Placeholder{padding:15px;font-size:11px;color:#b8c9db;line-height:1.55}
+#ros2Panel .ros2NodeRow{display:flex;flex-direction:column;gap:5px;padding:10px;border-bottom:1px solid #49668a45;overflow-wrap:anywhere}
+#ros2Panel .ros2NodeRow strong{font-size:12px}
+#ros2Panel .ros2NodeRow button{align-self:flex-start;margin-top:3px}
+#ros2Panel #ros2MsgPreview{font:11px/1.5 Consolas,"Courier New",monospace;white-space:pre-wrap;overflow-wrap:anywhere;
+  background:#0c1826;border:1px solid #3d5b77;padding:10px;border-radius:8px;max-height:230px;overflow:auto}
+#ros2Panel #ros2MsgStats{font-size:11px;line-height:1.6;color:#9bdcc7;white-space:pre-wrap;overflow-wrap:anywhere;margin:9px 0}
+#ros2Panel .ros2Footer{border-top:1px solid #44607a66;margin-top:12px;padding-top:9px;color:#91a7bf;font-size:10.5px;line-height:1.55}
+@media(max-width:620px){#ros2Panel{right:6px;width:calc(100vw - 12px);padding:12px}#ros2Panel .ros2Fields{grid-template-columns:1fr}}
+
 </style>
 
 <script type="importmap">
@@ -475,6 +838,46 @@ body.mobile-fps #modeHint{display:none}
 </head>
 <body>
 <canvas id="viewer" tabindex="0"></canvas>
+<!-- v5.5.6: data-derived clean overview map; view-space route editor. -->
+<button id="agvMiniDock" type="button" aria-label="拖动小地图调整位置，点击放大并编辑 AGV 路点" title="按住拖动改变位置；单击放大；右键重置位置">
+  <canvas id="agvMiniCanvas" width="320" height="320"></canvas>
+  <span id="agvMiniLabel">拖动移动 · 点击放大</span>
+</button>
+<div id="agvMapOverlay" role="dialog" aria-modal="true" aria-labelledby="agvMapTitle">
+  <div id="agvMapDialog">
+    <div class="agvMapHeader">
+      <div>
+        <h2 id="agvMapTitle">AGV 场景导航图 · 路点编辑</h2>
+        <div id="agvMapSceneInfo">等待加载场景</div>
+        <div id="agvMapGeoStatus">地理定位：未配准（路线仍为 Viewer 坐标）</div>
+      </div>
+      <button id="agvMapClose" class="agvMapTool" type="button">关闭 ×</button>
+    </div>
+    <div class="agvMapTools">
+      <button id="agvMapModeadd" class="agvMapTool active" type="button">＋ 放置路点</button>
+      <button id="agvMapModemove" class="agvMapTool" type="button">移动路点</button>
+      <button id="agvMapModedelete" class="agvMapTool" type="button">删除路点</button>
+      <button id="agvMapModepan" class="agvMapTool" type="button">平移地图</button>
+      <button id="agvMapFit" class="agvMapTool" type="button">全景适配</button>
+      <button id="agvMapUndo" class="agvMapTool" type="button">撤销末点</button>
+      <button id="agvMapClear" class="agvMapTool" type="button">清空路线</button>
+    </div>
+    <div id="agvMapViewport"><canvas id="agvMapCanvas" width="768" height="768" aria-label="俯视场景路线编辑画布"></canvas></div>
+    <div id="agvMapStatus">等待模型加载</div>
+    <div class="agvMapTools">
+      <button id="agvMapSave" class="agvMapTool" type="button">保存本地路线</button>
+      <button id="agvMapExport" class="agvMapTool" type="button">导出路线＋标定 JSON</button>
+      <button id="agvMapImport" class="agvMapTool" type="button">导入已存路线</button>
+    </div>
+    <div class="agvMapFoot">
+      <span class="agvMapLegend"><span class="agvMapDot" style="background:#ff874c"></span>虚拟小车</span>
+      <span class="agvMapLegend"><span class="agvMapDot" style="background:#1ddab9"></span>规划路点</span>
+      <label class="agvMapLegend agvMapCameraOption" title="默认关闭，开启后以蓝色箭头标记观看相机，而非第二辆 AGV"><input id="agvMapShowCamera" type="checkbox"> 显示相机方向（调试）</label>
+      <span>灰色区域表示高斯重建覆盖范围，青绿色表示高位几何分布；两者均不代表可通行判定。点击布点、拖动编号点调整，滚轮缩放。路线仅供模拟。</span>
+    </div>
+  </div>
+</div>
+
 <div id="crosshair"></div>
 <div id="toast"></div>
 <div id="loadingOverlay">
@@ -547,19 +950,51 @@ body.mobile-fps #modeHint{display:none}
   </div>
 </div>
 
-<div id="toolbar" class="glass">
-  <button id="projectBtn" class="toolbtn">项目</button>
-  <button id="homeTopBtn" class="toolbtn">主页</button>
-  <button id="orbitBtn" class="toolbtn active">轨道</button>
-  <button id="fpsBtn" class="toolbtn">漫游</button>
-  <button id="fullBtn" class="toolbtn">全屏</button>
-  <button id="modelSwitchBtn" class="toolbtn">模型替换</button>
-  <button id="agvBtn" class="toolbtn">AGV v5.5.4.2</button>
-  <button id="ackermannBtn" class="toolbtn">Ackermann CAD</button>
-  <button id="driveBtn" class="toolbtn">驾驶 v5.5.4.2</button>
-  <button id="shareBtn" class="toolbtn">分享</button>
-  <button id="settingsBtn" class="toolbtn">设置</button>
+<nav id="toolbar" class="glass" aria-label="AGV 数字孪生功能栏" data-ui-version="5.5.8.4">
+<section class="navGroup navGroup--navigation" data-nav-group="navigation" aria-label="场景导航">
+<div class="navGroupHeader">
+  <span class="navGroupLabel" data-nav-label="navigation">场景导航</span>
+  <button type="button" class="navGroupToggle" data-nav-toggle="navigation" aria-label="收起场景导航" aria-expanded="true" aria-controls="navButtons-navigation" title="收起场景导航"><span class="navChevron" aria-hidden="true">▾</span></button>
 </div>
+<div class="navButtons" id="navButtons-navigation">
+<button id="projectBtn" type="button" class="toolbtn" title="项目"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="navLabel">项目</span></button>
+<button id="homeTopBtn" type="button" class="toolbtn" title="主页"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-7h6v7"/></svg><span class="navLabel">主页</span></button>
+<button id="orbitBtn" type="button" class="toolbtn active" title="轨道"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M4 12a8 8 0 0 1 14-5"/><path d="m18 3 1 4-4 1"/><path d="M20 12a8 8 0 0 1-14 5"/><path d="m6 21-1-4 4-1"/></svg><span class="navLabel">轨道</span></button>
+<button id="fpsBtn" type="button" class="toolbtn" title="漫游"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m7 21 3-5 2-4-3-2-2 4H4"/><path d="m11 8 4 2 2 4h3"/><path d="m14 12 2 4 4 5"/></svg><span class="navLabel">漫游</span></button>
+</div></section>
+<section class="navGroup navGroup--view navGroup--extra" data-nav-group="view" aria-label="视图工具">
+<div class="navGroupHeader">
+  <span class="navGroupLabel" data-nav-label="view">视图工具</span>
+  <button type="button" class="navGroupToggle" data-nav-toggle="view" aria-label="收起视图工具" aria-expanded="true" aria-controls="navButtons-view" title="收起视图工具"><span class="navChevron" aria-hidden="true">▾</span></button>
+</div>
+<div class="navButtons" id="navButtons-view">
+<button id="fullBtn" type="button" class="toolbtn" title="全屏"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H4a1 1 0 0 0-1 1v4M16 3h4a1 1 0 0 1 1 1v4M3 16v4a1 1 0 0 0 1 1h4M21 16v4a1 1 0 0 1-1 1h-4"/></svg><span class="navLabel">全屏</span></button>
+<button id="modelSwitchBtn" type="button" class="toolbtn" title="模型替换"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg><span class="navLabel">模型替换</span></button>
+</div></section>
+<section class="navGroup navGroup--vehicle navGroup--extra" data-nav-group="vehicle" aria-label="模型与仿真">
+<div class="navGroupHeader">
+  <span class="navGroupLabel" data-nav-label="vehicle">模型与仿真</span>
+  <button type="button" class="navGroupToggle" data-nav-toggle="vehicle" aria-label="收起模型与仿真" aria-expanded="true" aria-controls="navButtons-vehicle" title="收起模型与仿真"><span class="navChevron" aria-hidden="true">▾</span></button>
+</div>
+<div class="navButtons" id="navButtons-vehicle">
+<button id="agvBtn" type="button" class="toolbtn" title="AGV v5.5.7.2"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M7 17v3m10-3v3M7 9h4m3 0h3"/></svg><span class="navLabel">AGV v5.5.7.2</span></button>
+<button id="ackermannBtn" type="button" class="toolbtn" title="Ackermann CAD"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 9 5-9 5-9-5 9-5ZM3 7v10l9 5 9-5V7M12 12v10"/></svg><span class="navLabel">Ackermann CAD</span></button>
+<button id="driveBtn" type="button" class="toolbtn" title="驾驶 v5.5.7.2"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M3.5 9c5.5-2 11.5-2 17 0M10 14l-2 6m6-6 2 6"/></svg><span class="navLabel">驾驶 v5.5.7.2</span></button>
+<button id="ros2Btn" type="button" class="toolbtn" title="ROS2 话题接收" aria-controls="ros2Panel" aria-expanded="false"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M5 7a10 10 0 0 1 14 0M8 10a6 6 0 0 1 8 0M5 17a10 10 0 0 0 14 0M8 14a6 6 0 0 0 8 0"/></svg><span class="navLabel">ROS2 接收</span><span id="ros2ToolbarLed" class="ros2Led" data-mode="offline" aria-hidden="true"></span></button>
+</div></section>
+<section class="navGroup navGroup--application navGroup--extra" data-nav-group="application" aria-label="地图与应用">
+<div class="navGroupHeader">
+  <span class="navGroupLabel" data-nav-label="application">地图与应用</span>
+  <button type="button" class="navGroupToggle" data-nav-toggle="application" aria-label="收起地图与应用" aria-expanded="true" aria-controls="navButtons-application" title="收起地图与应用"><span class="navChevron" aria-hidden="true">▾</span></button>
+</div>
+<div class="navButtons" id="navButtons-application">
+<button id="geoBtn" type="button" class="toolbtn" title="经纬度"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 0 0 18M12 3a14 14 0 0 1 0 18"/></svg><span class="navLabel">经纬度</span></button>
+<button id="agvMapOpenToolbar" type="button" class="toolbtn" title="俯视地图"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16m6-14v16"/></svg><span class="navLabel">俯视地图</span></button>
+<button id="shareBtn" type="button" class="toolbtn" title="分享"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><path d="m8 11 8-5m-8 7 8 5"/></svg><span class="navLabel">分享</span></button>
+<button id="settingsBtn" type="button" class="toolbtn" title="设置"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l1 3 2 1 3-1 2 4-2 2v2l2 2-2 4-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-4 2-2v-2L2 9l2-4 3 1 2-1z"/><circle cx="12" cy="12" r="3"/></svg><span class="navLabel">设置</span></button>
+</div></section>
+<span id="navUiVersion" aria-hidden="true">UI 5.5.8.4</span>
+</nav>
 
 
 <div id="modelSwitchPanel" class="glass" aria-label="Model manager">
@@ -583,7 +1018,7 @@ body.mobile-fps #modeHint{display:none}
 
 <div id="drivePanel" class="glass" aria-label="Ackermann driving simulation">
   <div class="driveRow" style="justify-content:space-between;margin-top:0">
-    <h3>Ackermann | 驾驶仿真 v5.5.4.2</h3>
+    <h3>Ackermann | 驾驶仿真 v5.5.4.4</h3>
     <button id="driveCloseBtn" class="settingsBtn">关闭</button>
   </div>
   <div class="driveWarn">仅浏览器内虚拟仿真，尚无碰撞、避障和 ROS 控制。已知长度 P1–P2 只是尺度标定线，不应作为自动巡航路线。</div>
@@ -624,6 +1059,7 @@ body.mobile-fps #modeHint{display:none}
     <div class="traceStyleNote">线宽仅是可视化效果，不代表真实道路宽度或安全通行带。</div>
   </div>
   <div id="driveTelemetry">等待加载模型…</div>
+  <div id="geoDriveReadout">地理坐标：未配准 · 非 GNSS 实时定位</div>
   <div class="driveRow">
     <button id="driveResetBtn" class="settingsBtn">恢复初始车位</button>
     <button id="driveClearTrailBtn" class="settingsBtn">清除彩色行驶轨迹</button>
@@ -691,7 +1127,7 @@ body.mobile-fps #modeHint{display:none}
 
 <div id="agvPanel" class="glass" aria-label="AGV experimental route editor">
   <div class="agvRow" style="justify-content:space-between;margin-top:0">
-    <h3>AGV v5.5.4.2 | 场景轨迹实验</h3>
+    <h3>AGV v5.5.4.4 | 场景轨迹实验</h3>
     <button id="agvCloseBtn" class="settingsBtn">关闭</button>
   </div>
   <div class="agvWarn">当前只是虚拟 AGV 路线可视化。参考地面为估算平面，未完成真实比例尺与 ROS map 配准，不可用于真实机器人导航。</div>
@@ -738,8 +1174,76 @@ body.mobile-fps #modeHint{display:none}
     <button id="agvSaveBtn" class="settingsBtn">保存本地草稿</button>
     <button id="agvExportBtn" class="settingsBtn">导出路线 + 标定 JSON</button>
   </div>
+  <div class="agvRow">
+    <button id="agvImportBtn" class="settingsBtn" type="button">导入路线/标定 JSON</button>
+    <input id="agvImportInput" type="file" accept=".json,application/json" multiple hidden>
+  </div>
   <div id="agvState">等待模型...</div>
 </div>
+
+
+<!-- Geographic UI is explicitly disabled until a scene-locked control point registration passes held-out checks. -->
+<div id="geoPanel" class="glass" aria-label="WGS84 geography and Viewer Mesh registration">
+  <div class="geoTop"><h3>v5.5.7.2 ｜epoch_30 地理配准</h3><button id="geoCloseBtn" class="settingsBtn" type="button">关闭 ×</button></div>
+  <div class="geoNotice">本页面只将 Mesh 地理参考关联到已核实的 epoch_30 SPZ（SHA-256 严格核验），不会套用到 park2_splat。车辆经纬度只在 SPZ→Mesh 对应点配准及独立检查通过后显示。显示值是<strong>模拟位姿的模型坐标推算</strong>，不是实时 GNSS、RTK 或 ROS 定位。</div>
+  <div class="geoHead">一、已有 Mesh 地理参考（只读）</div>
+  <div class="geoValue">
+    <div>参考系：<span id="geoFileCRS">等待文件</span></div>
+    <div>模型参考原点：<span id="geoOrigin">等待文件</span></div>
+    <div>状态：<span id="geoRefState">尚未加载参考数据</span></div>
+    <div>当前场景：<span id="geoSceneId">未加载</span></div>
+  </div>
+  <div class="geoCaption">坐标转换使用 Mesh PLY 原始米制 XYZ（Z 向上），不使用 GLB 为显示设置的 Y-up 旋转。椭球高 h 不是海拔（正常高）。</div>
+  <div class="geoHead">二、Viewer ↔ Mesh 同名点配准</div>
+  <div class="geoCaption">至少 4 个不同物理位置的拟合点和 1 个未参与拟合的检查点；控制点建议分布在场景周边。XYZ 必须对应同一个清晰、固定的物理特征。Mesh XYZ 可从 CloudCompare 对原始 Model.ply 点选读取。</div>
+  <div class="geoButtons">
+    <button id="geoAddControl" type="button">＋ 拟合点</button>
+    <button id="geoAddCheck" type="button">＋ 独立检查点</button>
+    <span id="geoPairCount" class="geoCaption">0 拟合点 + 0 检查点</span>
+  </div>
+  <div id="geoPairList"></div>
+  <div class="geoCaption" id="geoPickHint">可手动输入三维 Viewer XYZ；“地面取点”只取参考平面的估计坐标。</div>
+  <div class="geoButtons">
+    <label style="font-size:11px" for="geoMaxError">最大允许残差</label><input id="geoMaxError" type="number" min="0.01" max="20" step="0.01" value="0.5"><span class="geoCaption">米（演示验收阈值，非测量认证）</span>
+  </div>
+  <div class="geoButtons"><button id="geoSolveBtn" class="geoPrimary" type="button">计算相似变换并检查</button></div>
+  <div class="geoValue" id="geoQuality">尚无可用的控制点拟合结果</div>
+  <div class="geoValue" style="margin-top:7px">配准状态：<b id="geoRegistrationState">未完成控制点配准</b></div>
+  <div id="geoMessage">先加载 epoch_30 SPZ，程序将核验源文件 SHA-256。</div>
+  <div class="geoHead">三、虚拟 AGV 经纬度（模型推算）</div>
+  <div class="geoValue" id="geoVehicleCoords">经纬度：未配准</div>
+  <div class="geoButtons">
+    <button id="geoSaveBtn" type="button">保存已验收方案到本机</button>
+    <button id="geoExportBtn" type="button">导出配准/草稿 JSON</button>
+    <button id="geoImportBtn" type="button">导入配准 JSON</button>
+    <input id="geoImportFile" hidden type="file" accept=".json,application/json">
+  </div>
+  <div class="geoButtons"><button id="geoPathExportBtn" class="geoPrimary" type="button" disabled>导出模拟路线地理坐标 JSON</button></div>
+  <div class="geoCaption">所有配准方案按场景隔离。切换场景即停用坐标，导入保存方案时会重新计算残差。系统不会将未配准位置填成参考原点。</div>
+</div>
+
+
+<!-- v5.5.8.4: self-contained read-only ROS2 receiver. Yellow equipment box is a semantic anchor,
+     not a physical CAD connector; no ROS2 data may change the car pose in this phase. -->
+<aside id="ros2Panel" class="glass" role="dialog" aria-label="ROS2 话题接收面板" aria-hidden="true">
+  <div class="ros2Heading"><h3>ROS2 实时接收 · v5.5.8.4</h3><button id="ros2CloseBtn" type="button" class="ros2Close">关闭 ×</button></div>
+  <div class="ros2Equipment"><span class="ros2Yellow" aria-hidden="true">▣</span><div><strong style="font-size:12px;color:#ffda89">车载黄色设备盒 · 接收接口</strong><p>本阶段只发现 ROS2 节点/话题并订阅消息，不控制小车，也不将 GNSS/里程计自动写入 3DGS 坐标。</p></div></div>
+  <div class="ros2StatusLine"><span id="ros2ConnState" data-mode="offline">未连接</span><span>来源：<b id="ros2Source">--</b></span><span>ROS_DOMAIN_ID：<b id="ros2Domain">--</b></span></div>
+  <div class="ros2Fields"><label class="ros2Field" for="ros2Endpoint">WebSocket 桥接地址<input id="ros2Endpoint" type="text" value="ws://127.0.0.1:8765" autocomplete="off" spellcheck="false" placeholder="ws://ROS2电脑IP:8765"></label><label class="ros2Field" for="ros2Token">访问令牌（跨机时）<input id="ros2Token" type="password" autocomplete="off" placeholder="不保存密码"></label></div>
+  <div class="ros2Actions"><button id="ros2ConnectBtn" class="ros2Action primary" type="button">连接桥接</button><button id="ros2DisconnectBtn" class="ros2Action" type="button" disabled>断开</button><button id="ros2RefreshBtn" class="ros2Action" type="button" disabled>刷新节点/话题</button></div>
+  <div id="ros2Info" role="status" aria-live="polite">尚未连接。</div>
+  <div class="ros2Tabs" role="tablist" aria-label="ROS2 数据查看"><button id="ros2Tab-topics" class="active" role="tab" aria-selected="true" type="button">话题列表</button><button id="ros2Tab-nodes" role="tab" aria-selected="false" type="button">节点列表</button><button id="ros2Tab-messages" role="tab" aria-selected="false" type="button">接收消息</button></div>
+  <section id="ros2TabContent-topics" role="tabpanel" aria-label="话题列表">
+    <div class="ros2Counts"><span>发现话题 <b id="ros2TopicCount">0</b></span><span>已选 <b id="ros2PickedCount">0</b></span><span>已订阅 <b id="ros2SubCount">0</b></span></div>
+    <label class="ros2Field" for="ros2TopicSearch">搜索话题名称或消息类型<input id="ros2TopicSearch" type="search" placeholder="例如 /fix, /odom, /tf"></label>
+    <div class="ros2Actions" style="margin-top:3px"><button id="ros2NodeFilterClear" class="ros2Action" type="button">清除节点筛选</button></div>
+    <div id="ros2TopicList" class="ros2Results" aria-label="ROS2 话题多选列表"></div>
+    <div class="ros2Actions"><button id="ros2SubscribeBtn" class="ros2Action primary" type="button" disabled>订阅选中</button><button id="ros2UnsubscribeBtn" class="ros2Action" type="button" disabled>取消选中订阅</button><button id="ros2UnsubscribeAllBtn" class="ros2Action" type="button" disabled>全部取消</button></div>
+  </section>
+  <section id="ros2TabContent-nodes" role="tabpanel" aria-label="节点列表" hidden><p style="font-size:11px;color:#a3bad4">点击节点的“查看其发布话题”，可以回到话题列表筛选。</p><div id="ros2NodeList" class="ros2Results"></div></section>
+  <section id="ros2TabContent-messages" role="tabpanel" aria-label="收到的消息" hidden><label class="ros2Field" for="ros2MsgTopicSelect">选择已订阅的话题<select id="ros2MsgTopicSelect"></select></label><div id="ros2MsgStats"></div><pre id="ros2MsgPreview">尚无订阅数据。</pre></section>
+  <div class="ros2Footer">连接方式：ROS2 Humble → rclpy 只读桥接节点 → WebSocket → 浏览器。成功订阅表示已建立 ROS2 订阅者；只有消息实际到达时才显示数据。图像、点云等大消息仅提供摘要。公网 HTTPS 页面须使用 WSS 和受保护的桥接服务。</div>
+</aside>
 
 <div id="settings" class="glass">
   <div class="sectionTitle">查看器状态</div>
@@ -752,8 +1256,8 @@ body.mobile-fps #modeHint{display:none}
   <div class="sectionTitle" style="margin-top:13px">漫游速度</div>
   <div id="speedWrap">
     <span>速度</span>
-    <input id="speed" type="range" min="0.05" max="2.0" value="0.30" step="0.05">
-    <span id="speedValue">0.30</span>
+    <input id="speed" type="range" min="0.15" max="6.0" value="0.90" step="0.05">
+    <span id="speedValue">0.90</span>
   </div>
 
   <div class="sectionTitle" style="margin-top:13px">模型与视角</div>
@@ -818,7 +1322,7 @@ body.mobile-fps #modeHint{display:none}
   <div class="sectionTitle">分享此数字孪生场景</div>
   <div class="meta">手机扫描二维码即可打开同一个公网 Viewer。</div>
   <img id="shareQr" src="assets/agv_share_qr.png" alt="3DGS Viewer 分享二维码">
-  <div id="shareUrl">https://yuhengd83-cell.github.io/gaussian-digital-twin/agv-test.html?v=5.5.4.2</div>
+  <div id="shareUrl">https://yuhengd83-cell.github.io/gaussian-digital-twin/agv-test.html?v=5.5.4.4</div>
   <div class="shareActions">
     <button id="copyLinkBtn" class="settingsBtn">复制链接</button>
     <button id="closeShareBtn" class="settingsBtn">关闭</button>
@@ -849,6 +1353,12 @@ body.mobile-fps #modeHint{display:none}
   <div id="mobileLookHint">右侧滑动调整视角</div>
 </div>
 
+
+<div id="modelProof" role="status" aria-live="polite" data-proof="warn">
+  <strong id="modelProofTitle">v5.5.8.4 | ROS2 接收 | epoch_30 | port 8108</strong>
+  <span id="modelProofInfo">Waiting for SPZ model identity verification...</span>
+</div>
+
 <div id="modeHint" class="glass">
   <span id="modeHintText"><b>轨道模式</b> · 左键旋转 · 右键平移 · 滚轮缩放</span>
 </div>
@@ -857,10 +1367,11 @@ body.mobile-fps #modeHint{display:none}
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { SparkRenderer, SplatMesh, transcodeSpz } from "@sparkjsdev/spark";
+import { createGeoPanel } from "./src/geo-panel.mjs";
 // v5.5.1: AGV tools embedded directly in this page to prevent a missing local
 // src/agv-route-editor.js request from preventing the entire viewer from booting.
 
-/* v5.5.4.2: world-space gradient TubeGeometry.
+/* v5.5.4.4: world-space gradient TubeGeometry.
  * WebGL LineBasicMaterial.linewidth is commonly ignored; use an actual mesh.
  * Scene units/metre come from CAD pose where available, NOT from pixel width.
  */
@@ -908,7 +1419,7 @@ function createColoredTrackMesh(worldPoints,widthInWorldUnits,kind,palette){
     }
   }
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
-  const material=new THREE.MeshBasicMaterial({vertexColors:true,depthTest:false,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+  const material=new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:1,depthTest:false,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
   const mesh=new THREE.Mesh(geometry,material);
   mesh.frustumCulled=false;
   return mesh;
@@ -1105,7 +1616,7 @@ function createAgvRouteEditor({ THREE, scene, camera, canvas, orbit, getViewMode
       const p=route[i];
       const sphere=new THREE.Mesh(
         new THREE.SphereGeometry(markerRadius,12,10),
-        new THREE.MeshBasicMaterial({color:i===0?0x50e5a7:0xffcf6d,depthTest:false,depthWrite:false})
+        new THREE.MeshBasicMaterial({color:i===0?0x50e5a7:0xffcf6d,transparent:true,opacity:1,depthTest:false,depthWrite:false})
       );
       sphere.position.set(p.x,p.y,p.z-pointHeight);
       sphere.renderOrder=150;
@@ -1150,7 +1661,9 @@ function createAgvRouteEditor({ THREE, scene, camera, canvas, orbit, getViewMode
     helperAxes.position.copy(boundsCenter);
     helperAxes.position.z=groundZ;
     helperAxes.renderOrder=145;
+    helperAxes.material.transparent=true;
     helperAxes.material.depthTest=false;
+    helperAxes.material.depthWrite=false;
     guideGroup.add(helperAxes);
   }
   function stopPlacement() {
@@ -1335,6 +1848,70 @@ function createAgvRouteEditor({ THREE, scene, camera, canvas, orbit, getViewMode
     downloadJSON(toCalibrationDoc(),'calibration.json');
     notify('\u5df2\u5bfc\u51fa\u8def\u7ebf\u4e0e\u6807\u5b9a\u8349\u7a3f\uff08\u4e24\u4e2a JSON\uff09');
   });
+  // Rehydrate routes on the public HTTPS origin: localhost drafts are a separate origin.
+  // Import paths.json and calibration.json exported by the existing AGV tool.
+  $('agvImportBtn').addEventListener('click',()=>{
+    if(!modelReady || !modelId){setInfo('请先加载 park2 等目标场景');return;}
+    $('agvImportInput').click();
+  });
+  $('agvImportInput').addEventListener('change',async event=>{
+    const files=Array.from(event.target.files||[]);
+    event.target.value='';
+    if(!files.length)return;
+    try{
+      const docs=[];
+      for(const file of files){
+        if(file.size>2*1024*1024)throw new Error('JSON 文件超过 2 MiB，请检查文件内容');
+        docs.push(JSON.parse(await file.text()));
+      }
+      const pathDoc=docs.find(d=>d?.schema==='agv-paths-v1');
+      const calibDoc=docs.find(d=>d?.schema==='agv-calibration-v1');
+      if(!pathDoc && !calibDoc)throw new Error('请选择此前导出的 paths.json 或 calibration.json');
+      for(const doc of [pathDoc,calibDoc]){
+        if(doc && doc.sceneModelId!==modelId){
+          throw new Error('场景 ID 不匹配：'+doc.sceneModelId+'；当前为 '+modelId+'。为防止错位，已拒绝导入。');
+        }
+      }
+      if(pathDoc && (!Array.isArray(pathDoc.waypoints) || pathDoc.waypoints.length>100 ||
+        pathDoc.waypoints.some(w=>!isFinite3(w?.viewer)))){
+        throw new Error('路线坐标无效：每个路点必须为有限的 Viewer XYZ 三元组');
+      }
+      applyDraft({route:pathDoc||toRouteDoc(),calibration:calibDoc||toCalibrationDoc()});
+      renderRoute();renderGuides();persist();
+      setInfo('已导入 '+route.length+' 个路点与标定草稿，当前浏览器已保存');
+      notify('路径/标定数据已导入。注意这不是导航安全验收。');
+    }catch(err){
+      console.warn('AGV route import failed',err);
+      setInfo('导入失败：'+(err?.message||String(err)));
+    }
+  });
+  function invalidateReferenceScale(){
+    // The original P1-P2 calibration cannot be assumed valid after editing waypoints.
+    metersPerUnit=null;knownDistanceMeters=null;
+  }
+  function completeMapEdit(){renderRoute();persist();}
+  function addWaypointFromMap(x,y){
+    if(!modelReady||!Number.isFinite(x)||!Number.isFinite(y)||route.length>=100)return false;
+    route.push(new THREE.Vector3(x,y,groundZ));
+    invalidateReferenceScale();completeMapEdit();return true;
+  }
+  function moveWaypointFromMap(index,x,y){
+    if(!modelReady||index<0||index>=route.length||!Number.isFinite(x)||!Number.isFinite(y))return false;
+    route[index].x=x;route[index].y=y;
+    invalidateReferenceScale();completeMapEdit();return true;
+  }
+  function removeWaypoint(index){
+    if(!modelReady||index<0||index>=route.length)return false;
+    route.splice(index,1);invalidateReferenceScale();completeMapEdit();return true;
+  }
+  function undoWaypoint(){
+    if(!modelReady||!route.length)return false;
+    route.pop();invalidateReferenceScale();completeMapEdit();return true;
+  }
+  function clearWaypointMap(){
+    if(!modelReady||!route.length)return false;
+    route=[];invalidateReferenceScale();completeMapEdit();return true;
+  }
   traceAppearance.subscribe(()=>renderRoute());
   setPanelOpen(false);
   updateInfo();
@@ -1345,6 +1922,8 @@ function createAgvRouteEditor({ THREE, scene, camera, canvas, orbit, getViewMode
       if(getViewMode()!=='orbit' && placing)stopPlacement();
     },
     setPanelOpen,
+    addWaypointFromMap,moveWaypointFromMap,removeWaypoint,undoWaypoint,clearWaypointMap,
+    saveWaypointMap:()=>persist(),getGroundZ:()=>groundZ,
     getDiagnostics:()=>({modelId,modelReady,waypoints:route.length,groundZ,metersPerUnit,placing}),
     getWaypoints:()=>route.map(p=>({x:p.x,y:p.y,z:p.z}))
   };
@@ -1354,7 +1933,8 @@ function createAgvRouteEditor({ THREE, scene, camera, canvas, orbit, getViewMode
 const $=id=>document.getElementById(id);
 const REPORT_TITLE="AGV Metric Gaussian Digital Twin";
 const REPORT_SUBTITLE="真实场景三维重建与数字孪生展示";
-const PUBLIC_URL="https://yuhengd83-cell.github.io/gaussian-digital-twin/agv-test.html?v=5.5.4.2";
+// Local-only beta: sharing continues to point at the last public site, not this unshipped build.
+const PUBLIC_URL="https://yuhengd83-cell.github.io/gaussian-digital-twin/agv-test.html?v=5.5.4.4";
 
 const canvas=$("viewer"),statusEl=$("status"),statsEl=$("stats"),errorEl=$("error");
 const dropEl=$("drop"),progressWrap=$("progressWrap"),crosshair=$("crosshair"),settingsEl=$("settings");
@@ -1412,6 +1992,39 @@ let sceneRadius=2,autoView=null,loading=false,permanentConfig=null;
 let activeSceneSpec=null;
 let sceneCatalog=[];
 let activeModelLabel='--';
+const DEFAULT_SCENE_ID='epoch30_20261015';
+const EXPECTED_DEFAULT_URL='models/2026-10-15_10-31-41_3DGS_epoch_30.spz';
+const EXPECTED_DEFAULT_SIZE=29254747;
+const EXPECTED_DEFAULT_SHA='e332130c5c8ae17babcf013d135108e63146f3115ede3509d8d9cb23ea5f1f13';
+function setModelProof(message,level='warn'){
+  const el=document.getElementById('modelProof');
+  const info=document.getElementById('modelProofInfo');
+  if(el&&info){el.dataset.proof=level;info.textContent=message;}
+}
+async function verifyDownloadedModel(bytes,spec){
+  if(spec?.identityStatus==='blocked')throw new Error(spec.identityError||'Scene identity is blocked');
+  if(spec?.id!==DEFAULT_SCENE_ID){
+    // A historical SPZ path contains epoch30 bytes but is catalogued as park2.
+    if(spec?.id==='park2_rear_20261019' && bytes.byteLength===EXPECTED_DEFAULT_SIZE){
+      if(!globalThis.crypto?.subtle)throw new Error('Cannot verify park2 model identity');
+      const digest=await globalThis.crypto.subtle.digest('SHA-256',bytes);
+      const sha=Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('');
+      if(sha===EXPECTED_DEFAULT_SHA)throw new Error('Model identity conflict: epoch30 bytes cannot be loaded as park2');
+    }
+    setModelProof('Other model selected: '+(spec?.name||spec?.url||'local file')+'. Epoch30 geographic reference is not inherited.','warn');
+    return;
+  }
+  if(spec.url!==EXPECTED_DEFAULT_URL || bytes.byteLength!==EXPECTED_DEFAULT_SIZE){
+    throw new Error('epoch_30 model identity mismatch: path/size does not match the audited SPZ. Expected '+EXPECTED_DEFAULT_SIZE+' bytes, got '+bytes.byteLength);
+  }
+  if(!globalThis.crypto?.subtle){throw new Error('Browser cannot calculate SHA-256 for epoch_30 model verification');}
+  setModelProof('Reading 29,254,747 bytes completed; verifying SHA-256...');
+  const digest=await globalThis.crypto.subtle.digest('SHA-256',bytes);
+  const sha=Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('');
+  if(sha!==EXPECTED_DEFAULT_SHA){throw new Error('epoch_30 model SHA-256 mismatch. The loaded file must not be labeled as a georeferenced model.');}
+  setModelProof('Verified source: 2026-10-15_10-31-41_3DGS_epoch_30.spz | 29,254,747 bytes | SHA-256 '+sha.slice(0,12)+'... | Mesh registration pending','ok');
+}
+
 const MODEL_HINTS=Object.freeze({
   unavailable: "\u6a21\u578b\u6587\u4ef6\u4e0d\u5b58\u5728\uff0c\u8bf7\u5148\u653e\u5165 models \u6587\u4ef6\u5939\u6216\u4f7f\u7528\u672c\u5730\u6587\u4ef6\u9009\u62e9\u3002",
   unsupported: "\u4e0d\u652f\u6301\u76f4\u63a5\u52a0\u8f7d ckpt \u8bad\u7ec3\u68c0\u67e5\u70b9\uff1b\u8bf7\u4ece\u8bad\u7ec3\u7ed3\u679c\u5bfc\u51fa Gaussian PLY \u6216 SPZ\u3002",
@@ -1452,6 +2065,10 @@ async function loadSceneCatalog(){
     const opt=document.createElement('option');
     opt.value=entry.id;
     opt.textContent=entry.name;
+    if(entry.identityStatus==='blocked'){
+      opt.disabled=true;
+      opt.textContent+=' [身份冲突，禁止加载]';
+    }
     modelSceneSelect.appendChild(opt);
   }
   if(doc.defaultModel && sceneCatalog.some(v=>v.id===doc.defaultModel))modelSceneSelect.value=doc.defaultModel;
@@ -1465,15 +2082,27 @@ async function loadSceneCatalog(){
 }
 async function switchToScene(entry){
  if(!entry||loading)return;
+ if(entry.identityStatus==='blocked'){
+  const message=entry.identityError||'Scene identity is blocked';
+  setModelSwitchInfo(message);setModelProof(message,'bad');showError(new Error(message));
+  setLoading(false);setModelPanelOpen(true);
+  return;
+ }
  if(currentModel && currentId==='scene:'+entry.id){
    setModelSwitchInfo('This scene is already loaded.');
    return;
  }
  if(mode==='fps')enterOrbit();
  if(!(await urlExists(entry.url))){
-  setModelSwitchInfo(MODEL_HINTS.unavailable+'\n'+entry.url);
+  const message=MODEL_HINTS.unavailable+'\n'+entry.url;
+  setModelSwitchInfo(message);
+  setModelProof('Requested model is missing: '+entry.url+'. No fallback model was loaded.','bad');
+  showError(new Error(message));
+  setLoading(false);
+  setModelPanelOpen(true);
   return;
  }
+ setModelProof('Selected scene: '+entry.name+' | '+entry.url+' | checking file...');
  setModelSwitchInfo('Loading: '+entry.name);
  setModelPanelOpen(false);
  try{
@@ -2293,7 +2922,8 @@ function createAckermannDriveSim({THREE, scene, camera, orbit, keys,
   setStatus('等待模型加载；这是虚拟运动演示，不连接 ROS。');
   telemetry();
   return {tick,updateFollow,isActive,onSceneLoading,onSceneLoaded,setPanelOpen,
-          stopDrive:()=>stop({exit:true})};
+          stopDrive:()=>stop({exit:true}),
+          getTrailPoints:()=>trailPositions};
 }
 
 
@@ -2385,9 +3015,10 @@ async function fetchBytesWithProgress(url){
 
   if(direct){
     if(received!==total){
-  console.warn("Content-Length differs from received bytes:",received,total);
-}
-    return direct;
+      console.warn('Content-Length differs from received bytes:',received,total);
+    }
+    // Use actual received bytes. Content-Length may reflect encoded transport.
+    return received===total ? direct : direct.slice(0,received);
   }
   const bytes=new Uint8Array(received);
   let offset=0;
@@ -2626,6 +3257,8 @@ async function autoFrame(){
 }
 
 function removeModel(){
+  geoPanel.onModelLoading();
+  agvMiniMap.onModelLoading();
   driveSim.onSceneLoading();
   agvEditor.onModelLoading();
   ackermannCad.onSceneLoading();
@@ -2653,7 +3286,9 @@ async function addModel(init,id){
     dropEl.classList.add("hidden");
 
     const agvBoundsPromise=computeRobustBounds(currentModel);
+    void agvMiniMap.onModelLoaded(id,currentModel,agvBoundsPromise);
     void agvEditor.onModelLoaded(id,agvBoundsPromise);
+    void geoPanel.onModelLoaded(id,currentModel,currentBytes);
     void ackermannCad.onSceneLoaded(id,agvBoundsPromise).then(()=>{
       if(currentId===id && ackermannCad.getDriveState().sceneReady)driveSim.onSceneLoaded(id);
     }).catch(err=>console.warn('Ackermann driving model not ready',err));
@@ -2707,6 +3342,7 @@ async function loadLocalFile(file){
     loadingBytes.textContent=file.name;
     const bytes=await readLocalFileWithProgress(file);
     currentBytes=bytes;
+    setModelProof('Manual model: '+file.name+' | '+bytes.byteLength+' bytes | verifying scene georeference separately','warn');
     const ok=await addModel({fileBytes:bytes,fileName:file.name},'local:'+file.name+':'+file.size+':'+file.lastModified);
     if(ok){showActiveModel(file.name+' (local, temporary)');setStatus(MODEL_HINTS.test);}
   }catch(e){
@@ -2746,6 +3382,7 @@ async function loadUrl(url,spec=null){
 
     const bytes=await fetchBytesWithProgress(url);
     currentBytes=bytes;
+    await verifyDownloadedModel(bytes,activeSceneSpec);
 
     setParsingStage();
 
@@ -2755,6 +3392,7 @@ async function loadUrl(url,spec=null){
       'scene:'+activeSceneSpec.id
     );
   }catch(e){
+    setModelProof('Model load/identity failed: '+(e?.message||String(e)),'bad');
     setLoading(false);
     showError(e);
     setStatus("模型加载失败。");
@@ -2771,42 +3409,35 @@ async function loadUrl(url,spec=null){
 async function tryAutoLoad(){
   if(location.protocol==='file:'){
     setLoading(false);
-    setStatus('Please use the .bat HTTP server launcher, not file://');
+    setStatus('Please launch via start_agv_v55_7_2_local.bat, not file://');
+    setModelProof('Wrong launch method: file://. Run the local server on port 8104.','bad');
     return;
   }
   const preferred=await loadSceneCatalog();
-  const custom=new URLSearchParams(location.search).get('url');
-  if(custom){
-    if(!/^models\/[\w./-]+\.(ply|spz|splat|ksplat|sog)$/i.test(custom) || custom.includes('..')){
-      setLoading(false);setStatus('Invalid model URL');return;
+  const params=new URLSearchParams(location.search);
+  const sceneOverride=params.get('scene');
+  const urlOverride=params.get('url');
+  if(urlOverride){
+    if(!/^models\/[\w./-]+\.(ply|spz|splat|ksplat|sog)$/i.test(urlOverride)||urlOverride.includes('..')){
+      setLoading(false);setStatus('Invalid model URL');setModelProof('Invalid explicit model URL','bad');return;
     }
-    await switchToScene({id:'url:'+custom,name:custom,url:custom,homeConfig:null,unverifiedUp:true});
+    const known=sceneCatalog.find(entry=>entry.url===urlOverride);
+    await switchToScene(known||{id:'url:'+urlOverride,name:urlOverride,url:urlOverride,homeConfig:null,unverifiedUp:true});
     return;
   }
-  if(preferred && await urlExists(preferred.url)){
-    await switchToScene(preferred);
+  const targetId=sceneOverride||DEFAULT_SCENE_ID;
+  const target=sceneCatalog.find(entry=>entry.id===targetId);
+  if(!target || (targetId===DEFAULT_SCENE_ID && target.url!==EXPECTED_DEFAULT_URL)){
+    setLoading(false);
+    setModelProof('Expected epoch30 entry is absent/mismatched in config/scenes.json. Refusing to load park2 as fallback.','bad');
+    showError(new Error('Scene config missing epoch_30 source. Check server ROOT shown in launcher.'));
+    setModelPanelOpen(true);
     return;
   }
-  for(const entry of sceneCatalog){
-    if(await urlExists(entry.url)){
-      await switchToScene(entry);
-      return;
-    }
+  if(preferred && preferred.id!==DEFAULT_SCENE_ID && !sceneOverride){
+    console.warn('Server config default differs from required epoch30, ignoring default:',preferred.id);
   }
-  const oldFiles=['models/splat.spz','models/splat.ply'];
-  for(const u of oldFiles){
-    if(await urlExists(u)){
-      await switchToScene({id:'legacy:'+u,name:u,url:u,
-        homeConfig:u==='models/splat.spz'?'viewer_config.json':null,
-        unverifiedUp:true});
-      return;
-    }
-  }
-  setLoading(false);
-  dropEl.classList.remove('hidden');
-  loadingStage.textContent='No model file found';
-  setStatus('No model in models/. Choose local PLY/SPZ or copy the model into models/.');
-  setModelPanelOpen(true);
+  await switchToScene(target);
 }
 
 function resetHome(){
@@ -2981,6 +3612,453 @@ const driveSim=createAckermannDriveSim({
   notify:message=>toast(message)
 });
 
+const geoPanel=createGeoPanel({
+  THREE,canvas,camera,getViewMode:()=>mode,enterOrbitMode:()=>enterOrbit(),
+  ackermannCad,agvEditor,driveSim,keys,notify:message=>toast(message)
+});
+
+
+/* v5.5.5 - Top-view 3DGS minimap + shared AGV route editing.
+ * Coordinate convention: Viewer +X right, +Y down on map, -Z up in 3D.
+ * All waypoint edits use the original AGV route editor's world-coordinate state.
+ * Spark offline target is optional; point-cloud projection is a deterministic fallback.
+ */
+function createAgvMinimap({THREE,SparkRenderer,renderer,scene,camera,agvEditor,ackermannCad,driveSim,keys,notify}){
+  const $=id=>document.getElementById(id);
+  const dock=$('agvMiniDock'),compact=$('agvMiniCanvas'),expanded=$('agvMapCanvas');
+  const popup=$('agvMapOverlay'),status=$('agvMapStatus'),sceneInfo=$('agvMapSceneInfo');
+  const compactCtx=compact.getContext('2d'),mapCtx=expanded.getContext('2d');
+  const imageCanvas=document.createElement('canvas');imageCanvas.width=768;imageCanvas.height=768;
+  const imageCtx=imageCanvas.getContext('2d',{willReadFrequently:true});
+  const pointRaster=document.createElement('canvas');pointRaster.width=768;pointRaster.height=768;
+  const pointCtx=pointRaster.getContext('2d');
+  let sceneId='',ready=false,sceneToken=0,backgroundReady=false;
+  let cx=0,cy=0,span=1; // world-X right, world-Y down, -Z Up
+  let zoom=1,viewCx=0,viewCy=0;
+  let editMode='add';
+  let held=null,dragging=false,lastTouch=null,dirty=true,shown=true;
+  let imageType='等待场景',lastDraw=0,failedImage=false;
+  // v5.5.8.3: Camera direction is optional. It must not look like a second AGV.
+  const cameraMarkerKey='agv-minimap-camera-marker-v5583';
+  const cameraMarkerToggle=$('agvMapShowCamera');
+  let showCameraMarker=false;
+  try{showCameraMarker=localStorage.getItem(cameraMarkerKey)==='1';}catch(_){}
+  cameraMarkerToggle.checked=showCameraMarker;
+  cameraMarkerToggle.addEventListener('change',()=>{
+    showCameraMarker=cameraMarkerToggle.checked;
+    try{localStorage.setItem(cameraMarkerKey,showCameraMarker?'1':'0');}catch(_){}
+    markDirty();
+  });
+  const testAPI={};
+  function worldToPixel(x,y,w,centerX,centerY,worldSpan){
+    return {x:(x-centerX)/worldSpan*w+w/2,y:(y-centerY)/worldSpan*w+w/2};
+  }
+  function pixelToWorld(px,py,w,centerX,centerY,worldSpan){
+    return {x:(px/w-.5)*worldSpan+centerX,y:(py/w-.5)*worldSpan+centerY};
+  }
+  function viewSpan(){return span/zoom;}
+  function clampView(){
+    const room=Math.max(0,(span-viewSpan())*.5);
+    viewCx=Math.min(cx+room,Math.max(cx-room,viewCx));
+    viewCy=Math.min(cy+room,Math.max(cy-room,viewCy));
+  }
+  function warn(text){status.textContent=text;notify(text);}
+  function setMode(mode){
+    editMode=mode;
+    for(const name of ['add','move','delete','pan']){
+      $('agvMapMode'+name).classList.toggle('active',name===mode);
+    }
+    expanded.style.cursor=mode==='pan'?'grab':mode==='move'?'grab':'crosshair';
+    markDirty();
+  }
+  function markDirty(){dirty=true;}
+  function normalizePoints(points){return Array.isArray(points)?points.filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)):[];}
+  function mapPointAt(e){
+    const rect=expanded.getBoundingClientRect();
+    const x=(e.clientX-rect.left)/rect.width*expanded.width;
+    const y=(e.clientY-rect.top)/rect.height*expanded.height;
+    return {px:x,py:y,world:pixelToWorld(x,y,expanded.width,viewCx,viewCy,viewSpan())};
+  }
+  function findWaypoint(px,py){
+    const pts=normalizePoints(agvEditor.getWaypoints());
+    for(let i=pts.length-1;i>=0;i--){
+      const p=worldToPixel(pts[i].x,pts[i].y,expanded.width,viewCx,viewCy,viewSpan());
+      if(Math.hypot(p.x-px,p.y-py)<=20)return i;
+    }
+    return -1;
+  }
+  function drawBase(ctx,size,centerX,centerY,worldSpan){
+    ctx.fillStyle='#17212b';ctx.fillRect(0,0,size,size);
+    if(backgroundReady){
+      const iw=imageCanvas.width;
+      const cropSize=iw*worldSpan/span;
+      const sx=(centerX-cx)/span*iw+(iw-cropSize)/2;
+      const sy=(centerY-cy)/span*iw+(iw-cropSize)/2;
+      ctx.drawImage(imageCanvas,sx,sy,cropSize,cropSize,0,0,size,size);
+    }else{
+      ctx.strokeStyle='rgba(163,198,230,.1)';ctx.lineWidth=1;
+      for(let i=1;i<10;i++){
+        const t=i*size/10;ctx.beginPath();ctx.moveTo(t,0);ctx.lineTo(t,size);ctx.moveTo(0,t);ctx.lineTo(size,t);ctx.stroke();
+      }
+      ctx.fillStyle='#a7b8c7';ctx.font=`${Math.max(12,size/38)}px sans-serif`;
+      ctx.textAlign='center';ctx.fillText(ready?'正在生成俯视底图':'正在等待 3DGS 模型',size/2,size/2);
+    }
+    // A subtle grid is useful for measuring relative point positions, not metric certification.
+    ctx.strokeStyle='rgba(218,238,255,.12)';ctx.lineWidth=1;
+    for(let i=1;i<4;i++){
+      const t=i*size/4;ctx.beginPath();ctx.moveTo(t,0);ctx.lineTo(t,size);ctx.moveTo(0,t);ctx.lineTo(size,t);ctx.stroke();
+    }
+  }
+  function drawGlyph(ctx,x,y,r,fill,label){
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();
+    ctx.lineWidth=Math.max(1.5,r*.26);ctx.strokeStyle='rgba(6,16,27,.95)';ctx.stroke();
+    if(label){ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`700 ${Math.max(9,r*1.15)}px sans-serif`;ctx.fillText(label,x,y+.2);}
+  }
+  function drawOverlay(ctx,size,centerX,centerY,worldSpan,small){
+    const pts=normalizePoints(agvEditor.getWaypoints());
+    const point=(p)=>worldToPixel(p.x,p.y,size,centerX,centerY,worldSpan);
+    // Planned route
+    if(pts.length>1){
+      ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=small?3.6:6;
+      ctx.strokeStyle='#050e20';ctx.beginPath();pts.forEach((p,i)=>{const q=point(p);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.stroke();
+      const grad=ctx.createLinearGradient(0,0,size,size);
+      grad.addColorStop(0,'#00e7ef');grad.addColorStop(.45,'#4686ff');grad.addColorStop(.75,'#b973ff');grad.addColorStop(1,'#ffbd5a');
+      ctx.lineWidth=small?2.6:4;ctx.strokeStyle=grad;ctx.stroke();
+    }
+    // Live travelled path (not a planned route)
+    const trail=typeof driveSim.getTrailPoints==='function'?normalizePoints(driveSim.getTrailPoints()):[];
+    if(trail.length>1){
+      ctx.beginPath();trail.forEach((p,i)=>{const q=point(p);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});
+      ctx.strokeStyle='#29f6a3';ctx.lineWidth=small?2:3;ctx.stroke();
+    }
+    pts.forEach((p,i)=>{
+      const q=point(p);
+      if(q.x < -15||q.x>size+15||q.y< -15||q.y>size+15)return;
+      drawGlyph(ctx,q.x,q.y,small?5:9,i===0?'#18d6a6':'#ffbd62',small?'':String(i+1));
+    });
+    // Optional camera marker (blue, off by default). Orange arrow remains AGV-only.
+    if(showCameraMarker){
+    const cam=point(camera.position);
+    if(cam.x>=-15&&cam.x<=size+15&&cam.y>=-15&&cam.y<=size+15){
+      const dir=new THREE.Vector3();camera.getWorldDirection(dir);
+      const angle=Math.atan2(dir.y,dir.x);
+      ctx.save();ctx.translate(cam.x,cam.y);ctx.rotate(angle);ctx.fillStyle='#58a8ff';ctx.strokeStyle='#08162b';ctx.lineWidth=small?1:2;
+      const l=small?9:14;
+      ctx.beginPath();ctx.moveTo(l,0);ctx.lineTo(-l*.6,-l*.52);ctx.lineTo(-l*.35,0);ctx.lineTo(-l*.6,l*.52);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+    }
+    }
+    // Ackermann position and heading. Viewer positive yaw points toward -Y.
+    const state=ackermannCad.getDriveState();
+    if(state?.loaded&&state?.sceneReady&&state.sceneModelId===sceneId){
+      const v=state.pose;
+      const q=point(v);
+      if(q.x>=-20&&q.x<=size+20&&q.y>=-20&&q.y<=size+20){
+        ctx.save();ctx.translate(q.x,q.y);ctx.rotate(-THREE.MathUtils.degToRad(v.yawDeg||0));
+        const scale=small?1:1.5;
+        ctx.fillStyle='#ff874c';ctx.strokeStyle='#07121a';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(12*scale,0);ctx.lineTo(-6*scale,-7*scale);ctx.lineTo(-3*scale,0);ctx.lineTo(-6*scale,7*scale);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+      }
+    }
+    // Axis indicator explicitly matches the -Z Up Viewer frame (not a compass).
+    ctx.save();ctx.font=`600 ${small?10:13}px sans-serif`;ctx.fillStyle='#e9f3ff';
+    ctx.textAlign='left';ctx.fillText('−Y ↑',9,small?18:23);
+      ctx.textAlign='right';ctx.fillText('+X →',size-9,small?18:23);ctx.restore();
+    // Display a viewer-coordinate scale bar only when the vehicle's scale is available.
+    const pose=ackermannCad.getDriveState()?.pose;
+    if(pose && Number.isFinite(pose.viewerUnitsPerMeter) && pose.viewerUnitsPerMeter>0){
+      const lenPx=Math.min(size*.28,5*pose.viewerUnitsPerMeter/worldSpan*size);
+      if(lenPx>16){
+        ctx.save();ctx.lineWidth=small?2:3;ctx.strokeStyle='#f3f8ff';
+        const x=size*.055,y=size*.92;
+        ctx.beginPath();ctx.moveTo(x,y-5);ctx.lineTo(x,y);ctx.lineTo(x+lenPx,y);ctx.lineTo(x+lenPx,y-5);ctx.stroke();
+        ctx.fillStyle='#f3f8ff';ctx.font=`700 ${small?10:13}px sans-serif`;
+        ctx.textAlign='left';ctx.fillText('约 5 m',x,y-9);ctx.restore();
+      }
+    }
+  }
+  function drawOne(ctx,canvas,small){
+    const size=canvas.width;
+    ctx.save();ctx.clearRect(0,0,size,size);
+    if(small){ctx.beginPath();ctx.arc(size/2,size/2,size/2-2,0,Math.PI*2);ctx.clip();}
+    const cX=small?cx:viewCx,cY=small?cy:viewCy,wSpan=small?span:viewSpan();
+    drawBase(ctx,size,cX,cY,wSpan);
+    drawOverlay(ctx,size,cX,cY,wSpan,small);
+    ctx.restore();
+    if(small){ctx.beginPath();ctx.arc(size/2,size/2,size/2-2,0,Math.PI*2);ctx.lineWidth=3;ctx.strokeStyle='rgba(166,207,244,.78)';ctx.stroke();}
+  }
+  function renderDynamic(timestamp=performance.now()){
+    if(!shown)return;
+    if(!dirty && timestamp-lastDraw<120)return;
+    lastDraw=timestamp;dirty=false;
+    drawOne(compactCtx,compact,true);
+    if(popup.classList.contains('open'))drawOne(mapCtx,expanded,false);
+  }
+  function updateText(){
+    const p=agvEditor.getWaypoints();
+    sceneInfo.textContent=`场景：${sceneId||'未加载'} · ${p.length} 个路点 · 俯视背景：${imageType}`;
+  }
+  function changeMapStatus(s){status.textContent=s;updateText();markDirty();}
+  // A spatially registered cartographic *schematic* of the actual park2 Gaussians.
+  // x,y are copied from the original PLY in Viewer coordinates; not a photogrammetric orthophoto.
+  const PARK2_BASE={x:0.04718240797519685,y:-0.22155130207538604,span:2.4401903557777405,count:918596};
+  async function tryLoadPark2Base(id,mesh,box,token){
+    if(!/park2|rear_2026|2026-10-15_10-31-41/i.test(String(id)))return false;
+    if(mesh.numSplats && Math.abs(mesh.numSplats-PARK2_BASE.count)/PARK2_BASE.count>.04)return false;
+    const bc=box.getCenter(new THREE.Vector3());
+    if(Math.hypot(bc.x-PARK2_BASE.x,bc.y-PARK2_BASE.y)>.12)return false;
+    const img=new Image();
+    img.decoding='async';
+    await new Promise((resolve,reject)=>{
+      img.onload=resolve;img.onerror=()=>reject(new Error('park2 navmap asset failed'));
+      img.src='assets/minimap/park2_clean_overview.webp?v=5.5.6';
+    });
+    if(token!==sceneToken)return true;
+    cx=PARK2_BASE.x;cy=PARK2_BASE.y;span=PARK2_BASE.span;
+    viewCx=cx;viewCy=cy;zoom=1;
+    imageCanvas.width=img.naturalWidth;imageCanvas.height=img.naturalHeight;
+    imageCtx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight);
+    backgroundReady=true;imageType='park2 高斯几何结构图（非航拍影像）';
+    changeMapStatus('清晰场景地图已就绪；蓝灰色为重建覆盖区，青绿色为高位几何分布。不能据此判断道路是否安全。');
+    return true;
+  }
+  // Other models: smooth density coverage map, rather than sparse square pixels.
+  async function fallbackPointProjection(mesh,token){
+    if(token!==sceneToken)return;
+    const res=384,arr=new Float32Array(res*res);
+    const nSplats=mesh.numSplats||900000;
+    const stride=Math.max(1,Math.floor(nSplats/850000));
+    mesh.updateMatrixWorld(true);
+    const M=mesh.matrixWorld.elements;
+    mesh.forEachSplat((i,p,_scale,_quat,opacity)=>{
+      if(i%stride!==0||opacity<.08)return;
+      const x=M[0]*p.x+M[4]*p.y+M[8]*p.z+M[12];
+      const y=M[1]*p.x+M[5]*p.y+M[9]*p.z+M[13];
+      const u=Math.floor(((x-cx)/span+.5)*res),v=Math.floor(((y-cy)/span+.5)*res);
+      if(u<0||v<0||u>=res||v>=res)return;
+      arr[v*res+u]+=opacity;
+    });
+    if(token!==sceneToken)return;
+    const low=document.createElement('canvas');low.width=low.height=res;
+    const lowCtx=low.getContext('2d');
+    const pixels=lowCtx.createImageData(res,res),d=pixels.data;
+    for(let i=0;i<arr.length;i++){
+      const score=Math.min(1,Math.log1p(arr[i])/.95),o=i*4;
+      d[o]=Math.round(24+112*score);
+      d[o+1]=Math.round(35+123*score);
+      d[o+2]=Math.round(49+133*score);
+      d[o+3]=255;
+    }
+    lowCtx.putImageData(pixels,0,0);
+    imageCanvas.width=imageCanvas.height=768;
+    imageCtx.fillStyle='#17212b';imageCtx.fillRect(0,0,768,768);
+    imageCtx.imageSmoothingEnabled=true;
+    imageCtx.filter='blur(2.5px)';imageCtx.drawImage(low,0,0,768,768);imageCtx.filter='none';
+    backgroundReady=true;imageType='高斯覆盖密度图（非真实航拍）';
+    changeMapStatus('已生成连续覆盖密度图；区域亮度表示高斯重建数据密度，不代表可通行性。');
+  }
+  async function renderSceneBirdsEye(mesh,box,token){
+    // Spark 2.3.x's offscreen renderer supports additional viewpoints without changing main camera.
+    let offline=null;
+    try{
+      const topCamera=new THREE.OrthographicCamera(-span/2,span/2,span/2,-span/2,.002,Math.max(10,span*20));
+      topCamera.position.set(cx,cy,box.min.z-Math.max(span*1.5,.5));
+      topCamera.up.set(0,-1,0);
+      topCamera.lookAt(cx,cy,box.getCenter(new THREE.Vector3()).z);
+      topCamera.updateMatrixWorld();
+      topCamera.updateProjectionMatrix();
+      offline=new SparkRenderer({renderer,target:{width:768,height:768},autoUpdate:false});
+      await Promise.race([
+        offline.update({scene,camera:topCamera}),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('Topdown render timeout')),12000))
+      ]);
+      if(token!==sceneToken)return;
+      offline.renderTarget({scene,camera:topCamera});
+      const pixels=offline.readTarget();
+      if(!pixels||pixels.length!==768*768*4)throw new Error('Topdown image size invalid');
+      // WebGL render target pixels are bottom-up. Flip to Canvas top-left origin.
+      const corrected=new Uint8ClampedArray(pixels.length);
+      let n=0;
+      for(let y=0;y<768;y++){
+        const src=(767-y)*768*4;
+        corrected.set(pixels.subarray(src,src+768*4),y*768*4);
+        for(let x=0;x<768;x+=16){if(corrected[y*768*4+x*4+3]>0)n++;}
+      }
+      if(n<250)throw new Error('Topdown image is empty');
+      if(token!==sceneToken)return;
+      imageCtx.putImageData(new ImageData(corrected,768,768),0,0);
+      backgroundReady=true;imageType='3DGS 正交俯视图';changeMapStatus('实景俯视图就绪。点击地图开始编辑路径。');
+    }finally{
+      try{offline?.dispose();}catch(err){console.warn('Map renderer cleanup',err)}
+    }
+  }
+  function hide(){popup.classList.remove('open');document.body.classList.remove('agv-map-open');held=null;dragging=false;markDirty();}
+  function show(){
+    if(!ready){warn('请先等待 3DGS 场景加载完成');return;}
+    popup.classList.add('open');document.body.classList.add('agv-map-open');keys.clear();
+    zoom=1;viewCx=cx;viewCy=cy;setMode('add');
+    changeMapStatus('点击空旷地面添加路点；拖动编号点可移动；右键点可删除。');
+    $('agvMapClose').focus();markDirty();
+  }
+  function canEdit(){
+    if(!ready){warn('请先加载场景');return false;}
+    if(driveSim.isActive()){warn('小车行驶中禁止改路点，请先停车并退出驾驶模式');return false;}
+    return true;
+  }
+  function refreshModelState(){
+    updateText();
+    shown=!document.getElementById('introOverlay')?.classList.contains('hidden')?false:true;
+    // Minimap remains in the HTML but never blocks the model's loading overlay.
+    dock.style.display=ready?'block':'none';
+  }
+  function onModelLoading(){sceneToken++;sceneId='';ready=false;backgroundReady=false;imageType='等待场景';hide();dock.style.display='none';markDirty();}
+  async function onModelLoaded(id,mesh,boundsPromise){
+    const token=++sceneToken;
+    ready=false;sceneId=id;imageType='正在计算俯视范围';backgroundReady=false;hide();
+    try{
+      const box=await boundsPromise;
+      if(token!==sceneToken || !box || box.isEmpty())return;
+      const size=box.getSize(new THREE.Vector3());
+      const center=box.getCenter(new THREE.Vector3());
+      cx=center.x;cy=center.y;span=Math.max(size.x,size.y,.2)*1.2;
+      viewCx=cx;viewCy=cy;zoom=1;ready=true;dock.style.display='block';
+      changeMapStatus('场景已加载，正在生成俯视图…');
+      const waitFrame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+      await waitFrame();
+      if(token!==sceneToken)return;
+      let external=false;
+      try{external=await tryLoadPark2Base(id,mesh,box,token)}catch(err){
+        console.warn('Registered park2 map unavailable; trying Spark snapshot',err);
+      }
+      if(token!==sceneToken)return;
+      if(!external){
+        try{await renderSceneBirdsEye(mesh,box,token)}catch(err){
+          console.warn('Spark top-view unavailable; using smooth coverage map',err);
+          if(token===sceneToken){imageType='正在生成几何覆盖图';changeMapStatus('生成连续覆盖图…');await waitFrame();await fallbackPointProjection(mesh,token);}
+        }
+      }
+    }catch(err){console.warn('Minimap initialization',err);changeMapStatus('无法生成俯视地图：'+(err?.message||err));}
+  }
+  // Minimap button and large map interactions
+  dock.addEventListener('click',show);
+  $('agvMapOpenToolbar').addEventListener('click',show);
+  $('agvMapClose').addEventListener('click',hide);
+  popup.addEventListener('pointerdown',e=>{if(e.target===popup)hide();});
+  addEventListener('keydown',e=>{
+    if(!popup.classList.contains('open'))return;
+    if(e.key==='Escape'){e.preventDefault();hide();}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.closest('input,textarea')){
+      e.preventDefault();if(canEdit()){agvEditor.undoWaypoint();markDirty();}
+    }
+  });
+  for(const name of ['add','move','delete','pan'])$('agvMapMode'+name).addEventListener('click',()=>setMode(name));
+  $('agvMapFit').addEventListener('click',()=>{viewCx=cx;viewCy=cy;zoom=1;markDirty();});
+  $('agvMapUndo').addEventListener('click',()=>{if(canEdit()){agvEditor.undoWaypoint();markDirty();updateText();}});
+  $('agvMapClear').addEventListener('click',()=>{if(canEdit()&&confirm('清空当前场景的规划路线？标定比例不属于地图编辑成果，请保留原有备份。')){agvEditor.clearWaypointMap();markDirty();updateText();}});
+  $('agvMapSave').addEventListener('click',()=>{agvEditor.saveWaypointMap();notify('路线已保存在当前浏览器。需要跨设备共享请导出 JSON。');});
+  $('agvMapExport').addEventListener('click',()=>$('agvExportBtn').click());
+  $('agvMapImport').addEventListener('click',()=>$('agvImportBtn').click());
+  expanded.addEventListener('contextmenu',e=>{
+    e.preventDefault();if(!canEdit())return;
+    const p=mapPointAt(e);const i=findWaypoint(p.px,p.py);
+    if(i>=0){agvEditor.removeWaypoint(i);markDirty();updateText();}
+  });
+  expanded.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    e.preventDefault();e.stopPropagation();
+    if(!ready)return;
+    const p=mapPointAt(e),i=findWaypoint(p.px,p.py);
+    dragging=false;
+    if(editMode==='pan'){held={mode:'pan',origin:p,centerX:viewCx,centerY:viewCy};}
+    else if(editMode==='delete'){
+      if(i>=0&&canEdit()){agvEditor.removeWaypoint(i);markDirty();updateText();}
+      return;
+    }else if(i>=0){
+      if(!canEdit())return;
+      held={mode:'move',index:i};
+    }else if(editMode==='add'){
+      if(!canEdit())return;
+      const ok=agvEditor.addWaypointFromMap(p.world.x,p.world.y);
+      if(ok){changeMapStatus('已添加 P'+agvEditor.getWaypoints().length+'。按 Ctrl+Z 撤销；保存后可自动巡航。');updateText();}
+      return;
+    }else{return;}
+    expanded.setPointerCapture(e.pointerId);
+  });
+  expanded.addEventListener('pointermove',e=>{
+    if(!held||!expanded.hasPointerCapture(e.pointerId))return;
+    const p=mapPointAt(e);
+    if(held.mode==='pan'){
+      const factor=viewSpan()/expanded.width;
+      viewCx=held.centerX-(p.px-held.origin.px)*factor;
+      viewCy=held.centerY-(p.py-held.origin.py)*factor;
+      clampView();markDirty();dragging=true;
+    }else if(held.mode==='move'){
+      if(canEdit()){
+        agvEditor.moveWaypointFromMap(held.index,p.world.x,p.world.y);
+        dragging=true;markDirty();updateText();
+      }
+    }
+  });
+  function finishPointer(e){held=null;dragging=false;if(expanded.hasPointerCapture(e.pointerId))expanded.releasePointerCapture(e.pointerId);markDirty();}
+  expanded.addEventListener('pointerup',finishPointer);
+  expanded.addEventListener('pointercancel',finishPointer);
+  expanded.addEventListener('wheel',e=>{
+    e.preventDefault();if(!ready)return;
+    const p=mapPointAt(e),anchor=p.world;
+    const next=Math.min(8,Math.max(1,zoom*(e.deltaY<0?1.18:1/1.18)));
+    if(next===zoom)return;
+    zoom=next;
+    const after=pixelToWorld(p.px,p.py,expanded.width,viewCx,viewCy,viewSpan());
+    viewCx+=anchor.x-after.x;viewCy+=anchor.y-after.y;
+    clampView();markDirty();
+  },{passive:false});
+  window.addEventListener('resize',()=>{markDirty();});
+  // On narrow screens, retain the toolbar map entry when a side panel occupies the whole width.
+  function dockPosition(){
+    if(innerWidth<920){
+      const panelOpen=Boolean(document.querySelector('#drivePanel.open,#ackermannPanel.open,#agvPanel.open,#modelSwitchPanel.open,#settings.open,#sharePanel.open'));
+      dock.style.visibility=panelOpen?'hidden':'visible'; // Toolbar map button remains available.
+      dock.style.right='12px';dock.style.top=innerWidth<760?'139px':'149px';return;
+    }
+    dock.style.visibility='visible';
+    let panel=null;
+    for(const selector of ['#drivePanel.open','#ackermannPanel.open','#agvPanel.open','#modelSwitchPanel.open','#settings.open','#sharePanel.open']){
+      const el=document.querySelector(selector);if(el){panel=el;break;}
+    }
+    if(panel){const rect=panel.getBoundingClientRect();dock.style.right=Math.round(innerWidth-rect.left+16)+'px';}
+    else dock.style.right='18px';
+    dock.style.top='112px';
+  }
+  setInterval(dockPosition,350);
+  dockPosition();
+  updateText();
+  return {onModelLoading,onModelLoaded,renderDynamic,markDirty,
+          open:show,close:hide,
+          getDiagnostics:()=>({sceneId,ready,backgroundReady,imageType,span,cx,cy,zoom,routeCount:agvEditor.getWaypoints().length}),
+          math:{worldToPixel,pixelToWorld}};
+}
+
+
+/* v5.5.4.4 - 3DGS splat-proof annotation overlay.
+ * Spark composites splats in the transparent pass; a depthTest:false opaque
+ * object could still be painted over by splats. This separate Three.js pass
+ * draws only visual aids after Spark, without modifying robot physics.
+ * It is intentionally X-ray style: annotations can be visible through walls.
+ */
+const trajectoryOverlayScene=new THREE.Scene();
+for(const groupName of [
+  'AGV_v55_route_overlay',
+  'AGV_v55_ground_reference',
+  'ACKERMANN_DRIVE_V554_SIM_TRAIL'
+]){
+  const group=scene.getObjectByName(groupName);
+  if(!group)throw new Error('Missing trajectory overlay group: '+groupName);
+  trajectoryOverlayScene.add(group);
+}
+
+const agvMiniMap=createAgvMinimap({
+  THREE,SparkRenderer,renderer,scene,camera,agvEditor,ackermannCad,driveSim,keys,
+  notify:(message)=>toast(message)
+});
 
 // ===== 手机摇杆 / 右侧滑动视角 =====
 let joystickX=0;
@@ -3114,6 +4192,10 @@ addEventListener("keydown",e=>{
   const editing=tag==="input"||tag==="textarea"||tag==="select";
 
   if(editing)return; // Typing form controls must never accelerate or steer AGV.
+  if(document.body.classList.contains('agv-map-open')){
+    if(['Space','KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight'].includes(e.code))e.preventDefault();
+    return;
+  }
   if(!editing && document.pointerLockElement!==canvas){
     if(e.code==="KeyH"){ resetHome(); toast("已回到首页视角"); return; }
     if(e.code==="Digit1"){ enterOrbit(); return; }
@@ -3374,6 +4456,21 @@ renderer.setAnimationLoop(()=>{
     camera
   );
 
+  // Render the colorful route, waypoints and traveled trail last. This avoids
+  // the splat compositor painting over the annotation, even on GitHub Pages.
+  const priorAutoClear=renderer.autoClear;
+  try{
+    renderer.autoClear=false;
+    renderer.clearDepth();
+    renderer.render(trajectoryOverlayScene,camera);
+  }finally{
+    renderer.autoClear=priorAutoClear;
+  }
+
+  // Live markers are drawn in a 2D canvas, independent of the Spark render pass.
+  agvMiniMap.renderDynamic(performance.now());
+  geoPanel.tick(performance.now());
+
   frames++;
 
   const now=performance.now();
@@ -3410,8 +4507,277 @@ updateModeHint();
 updateMobileUi();
 // All imports, setup and event wiring have completed successfully.
 window.__agv55Boot.ready=true;
-console.info('AGV v5.5.4.2 + Ackermann kinematic simulator ready');
+console.info('AGV v5.5.7.2 dedicated epoch30 server + strict SHA-256 default load ready');
 tryAutoLoad();
 </script>
+
+<script id="nav-v5581-controller">
+(()=>{
+  "use strict";
+  const bar=document.getElementById('toolbar');
+  if(!bar)return;
+  const groups=['navigation','view','vehicle','application'];
+  const storageKey='agv-toolbar-v5582-collapsed';
+  const groupByKey=Object.fromEntries(groups.map(key=>[key,bar.querySelector('[data-nav-group="'+key+'"]')]));
+  const toggles=Object.fromEntries(groups.map(key=>[key,bar.querySelector('[data-nav-toggle="'+key+'"]')]));
+  const getState=()=>{
+    try {
+      const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
+      if(!saved||typeof saved!=='object'||saved.version!==1)return null;
+      return Object.fromEntries(groups.filter(k=>typeof saved.collapsed?.[k]==='boolean')
+        .map(k=>[k,saved.collapsed[k]]));
+    }catch(_){return null;}
+  };
+  const saveState=()=>{
+    try {localStorage.setItem(storageKey,JSON.stringify({version:1,collapsed:{...state}}));}
+    catch(_){ /* Storage can be disabled in privacy mode. The buttons still work. */ }
+  };
+  const originalSaved=getState();
+  // Closed initially to keep the entire header to one compact row.
+  const state=Object.fromEntries(groups.map(k=>[k,originalSaved?.[k]??true]));
+  // Only one dropdown may remain open; otherwise adjacent menus overlap.
+  let wasOpen=false;
+  for(const key of groups){if(!state[key]){if(wasOpen)state[key]=true;else wasOpen=true;}}
+  let touched=false;
+  let pendingSync=0;
+  const sync=()=>{
+    pendingSync=0;
+    const brand=document.getElementById('brand');
+    const brandRect=brand?.getBoundingClientRect();
+    if(brandRect&&Number.isFinite(brandRect.right))
+      document.documentElement.style.setProperty('--brand-right',Math.ceil(brandRect.right)+'px');
+    const bottom=Math.ceil(Math.max(bar.getBoundingClientRect().bottom,brandRect?.bottom||0)+10);
+    if(Number.isFinite(bottom)&&bottom>=0)
+      document.documentElement.style.setProperty('--nav-panel-top',bottom+'px');
+  };
+  const scheduleSync=()=>{
+    if(pendingSync)return;
+    pendingSync=requestAnimationFrame(sync);
+  };
+  const renderGroup=(key)=>{
+    const group=groupByKey[key],button=toggles[key];
+    if(!group||!button)return;
+    const collapsed=!!state[key];
+    const label=group.querySelector('[data-nav-label]')?.textContent?.trim()||key;
+    const contents=group.querySelector('.navButtons');
+    group.classList.toggle('is-collapsed',collapsed);
+    if(contents){contents.hidden=collapsed;contents.setAttribute('aria-hidden',String(collapsed));}
+    button.setAttribute('aria-expanded',String(!collapsed));
+    button.setAttribute('aria-label',(collapsed?'展开':'收起')+label);
+    button.setAttribute('title',(collapsed?'展开':'收起')+label);
+    const chevron=button.querySelector('.navChevron');
+    if(chevron)chevron.textContent=collapsed?'▸':'▾';
+    scheduleSync();
+  };
+  const renderAll=()=>groups.forEach(renderGroup);
+  const closeMenus=()=>{
+    if(groups.every(key=>state[key]))return;
+    groups.forEach(key=>state[key]=true);renderAll();saveState();
+  };
+  document.addEventListener('pointerdown',event=>{
+    if(!bar.contains(event.target))closeMenus();
+  });
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape')closeMenus();
+  });
+  groups.forEach(key=>{
+    const button=toggles[key];
+    if(!button)return;
+    button.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      const opening=state[key];
+      for(const other of groups)state[other]=true;
+      state[key]=!opening;
+      touched=true;renderAll();saveState();
+    });
+  });
+  const syncActive=()=>{
+    groups.forEach(key=>{
+      const group=groupByKey[key];
+      group?.classList.toggle('has-active',!!group.querySelector('.toolbtn.active'));
+    });
+  };
+  document.querySelectorAll('#toolbar button.toolbtn').forEach(button=>{
+    button.addEventListener('click',closeMenus);
+    button.setAttribute('aria-pressed',String(button.classList.contains('active')));
+    if(window.MutationObserver)new MutationObserver(()=>{
+      button.setAttribute('aria-pressed',String(button.classList.contains('active')));
+      syncActive();
+    }).observe(button,{attributes:true,attributeFilter:['class']});
+  });
+  syncActive();
+  renderAll();
+  window.addEventListener('resize',scheduleSync,{passive:true});
+  if(window.ResizeObserver){
+    const resizeObserver=new ResizeObserver(scheduleSync);
+    resizeObserver.observe(bar);
+    const brand=document.getElementById('brand');
+    if(brand)resizeObserver.observe(brand);
+  }
+  // Optional labels/colors/default state, no runtime dependency on config fetch.
+  fetch('config/ui_toolbar.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(cfg=>{
+    if(!cfg||cfg.schema!=='agv-toolbar-v1')return;
+    if(cfg.groupLabels&&typeof cfg.groupLabels==='object'){
+      for(const [key,value] of Object.entries(cfg.groupLabels)){
+        const el=groupByKey[key]?.querySelector('[data-nav-label]');
+        if(el&&typeof value==='string'&&value.length<=20)el.textContent=value;
+      }
+    }
+    if(cfg.buttonLabels&&typeof cfg.buttonLabels==='object'){
+      for(const [key,value] of Object.entries(cfg.buttonLabels)){
+        const el=bar.querySelector('#'+key+' .navLabel');
+        if(el&&typeof value==='string'&&value.length<=28)el.textContent=value;
+      }
+    }
+    if(/^#[0-9a-fA-F]{6}$/.test(cfg.accent||''))
+      document.documentElement.style.setProperty('--nav-accent',cfg.accent);
+    if(originalSaved===null&&!touched&&cfg.defaultExpanded&&typeof cfg.defaultExpanded==='object'){
+      for(const key of groups){
+        if(typeof cfg.defaultExpanded[key]==='boolean')state[key]=!cfg.defaultExpanded[key];
+      }
+      // A new build always starts with a compact row unless the user has saved a choice.
+      for(const key of groups)state[key]=true;
+    }
+    renderAll();
+  }).catch(()=>{});
+  window.addEventListener('load',scheduleSync,{once:true});
+})();
+</script>
+
+
+<script id="agv-minimap-drag-v5582">
+(()=>{
+  'use strict';
+  const dock=document.getElementById('agvMiniDock');
+  if(!dock)return;
+  const KEY='agv-minimap-screen-position-v5582';
+  const MARGIN=8;
+  let stored=null;
+  let pointer=null;
+  let suppressClick=false;
+  let positionMode='auto';
+  const clamp=(v,a,b)=>Math.min(Math.max(v,a),Math.max(a,b));
+  const dims=()=>{
+    const style=getComputedStyle(dock);
+    return {
+      w:parseFloat(style.width)||182,
+      h:parseFloat(style.height)||182,
+      W:document.documentElement.clientWidth||innerWidth,
+      H:document.documentElement.clientHeight||innerHeight
+    };
+  };
+  const setPos=(x,y)=>{
+    const {w,h,W,H}=dims();
+    x=clamp(x,MARGIN,W-w-MARGIN);
+    y=clamp(y,MARGIN,H-h-MARGIN);
+    dock.style.setProperty('--mini-left',x+'px');
+    dock.style.setProperty('--mini-top',y+'px');
+    dock.style.setProperty('--mini-right','auto');
+    return {x,y};
+  };
+  const save=(x,y)=>{
+    const {w,h,W,H}=dims();
+    stored={v:1,px:clamp(x,0,W-w)/(Math.max(1,W-w)),py:clamp(y,0,H-h)/(Math.max(1,H-h))};
+    positionMode='saved';
+    try{localStorage.setItem(KEY,JSON.stringify(stored))}catch(_){/* privacy mode */}
+  };
+  const load=()=>{
+    try{
+      const value=JSON.parse(localStorage.getItem(KEY)||'null');
+      if(value?.v===1&&Number.isFinite(value.px)&&Number.isFinite(value.py))return value;
+    }catch(_){}
+    return null;
+  };
+  const isPanelVisible=(el)=>{
+    if(!el||getComputedStyle(el).display==='none')return false;
+    const box=el.getBoundingClientRect();return box.width>0&&box.height>0;
+  };
+  const initialPos=()=>{
+    const {W,w}=dims();
+    const panelIds=['drivePanel','geoPanel','modelSwitchPanel','settings','agvPanel','ackermannPanel','sharePanel','ros2Panel'];
+    let leftBoundary=W;
+    for(const id of panelIds){
+      const panel=document.getElementById(id);
+      if(isPanelVisible(panel))leftBoundary=Math.min(leftBoundary,panel.getBoundingClientRect().left);
+    }
+    const navBottom=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-panel-top'))||92;
+    const x=leftBoundary===W?W-w-20:leftBoundary-w-18;
+    return {x,y:Math.max(82,navBottom+12)};
+  };
+  const layout=()=>{
+    if(pointer)return;
+    if(positionMode==='saved'&&stored){
+      const {w,h,W,H}=dims();
+      setPos(stored.px*Math.max(0,W-w),stored.py*Math.max(0,H-h));
+    }else{
+      const pos=initialPos();setPos(pos.x,pos.y);
+    }
+  };
+  stored=load();
+  if(stored)positionMode='saved';
+  layout();
+  dock.addEventListener('pointerdown',event=>{
+    if(event.pointerType==='mouse'&&event.button!==0)return;
+    const {x,y}=dock.getBoundingClientRect();
+    pointer={id:event.pointerId,sx:event.clientX,sy:event.clientY,x,y,moved:false};
+    try{dock.setPointerCapture(event.pointerId)}catch(_){}
+  });
+  dock.addEventListener('pointermove',event=>{
+    if(!pointer||pointer.id!==event.pointerId)return;
+    const dx=event.clientX-pointer.sx,dy=event.clientY-pointer.sy;
+    if(!pointer.moved&&Math.hypot(dx,dy)<7)return;
+    pointer.moved=true;
+    dock.dataset.dragging='true';
+    setPos(pointer.x+dx,pointer.y+dy);
+    event.preventDefault();
+  },{passive:false});
+  const finish=event=>{
+    if(!pointer||pointer.id!==event.pointerId)return;
+    if(pointer.moved){
+      const pos=setPos(pointer.x+event.clientX-pointer.sx,pointer.y+event.clientY-pointer.sy);
+      save(pos.x,pos.y);
+      suppressClick=true;
+      setTimeout(()=>suppressClick=false,0);
+    }
+    pointer=null;
+    delete dock.dataset.dragging;
+    try{if(dock.hasPointerCapture(event.pointerId))dock.releasePointerCapture(event.pointerId)}catch(_){}
+  };
+  dock.addEventListener('pointerup',finish);
+  dock.addEventListener('pointercancel',finish);
+  // The original minimap click handler opens the map. A drag must not trigger it.
+  dock.addEventListener('click',event=>{
+    if(suppressClick){event.stopImmediatePropagation();event.preventDefault();suppressClick=false;}
+  },true);
+  // Right-click restores the automatic unobstructed position.
+  dock.addEventListener('contextmenu',event=>{
+    event.preventDefault();event.stopPropagation();
+    stored=null;positionMode='auto';
+    try{localStorage.removeItem(KEY)}catch(_){}
+    layout();
+  });
+  dock.addEventListener('keydown',event=>{
+    if(event.key==='Home'){
+      event.preventDefault();stored=null;positionMode='auto';
+      try{localStorage.removeItem(KEY)}catch(_){}
+      layout();
+    }
+  });
+  window.addEventListener('resize',layout,{passive:true});
+  if(window.ResizeObserver){
+    const ro=new ResizeObserver(layout);
+    ro.observe(dock);
+  }
+  // Follow opening/closing a right-side panel until user manually chooses a position.
+  const watch=new MutationObserver(()=>requestAnimationFrame(layout));
+  for(const id of ['drivePanel','geoPanel','modelSwitchPanel','settings','agvPanel','ackermannPanel','sharePanel']){
+    const panel=document.getElementById(id);if(panel)watch.observe(panel,{attributes:true,attributeFilter:['class','style']});
+  }
+  window.addEventListener('load',layout,{once:true});
+  window.__agvMiniDragV5582={layout, reset:()=>{stored=null;positionMode='auto';try{localStorage.removeItem(KEY)}catch(_){};layout();}};
+})();
+</script>
+
+<script src="./src/ros2_receiver.js?v=5.5.8.4"></script>
 </body>
 </html>

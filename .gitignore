@@ -1,0 +1,42 @@
+# Local audit evidence, backups and patch backups
+.release-local/
+.serena/
+.agv_patch_backup/
+# Credentials and machine-local files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+# Generated/runtime files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.cache/
+*.log
+Thumbs.db
+.DS_Store
+# Original local provenance and archives are not release inputs
+/MODEL_SOURCE.json
+*.zip
+# Public redistribution is blocked until authorization is documented.
+*.spz
+*.ply
+*.glb
+*.gltf
+*.stl
+*.STL
+/assets/ackermann/source/
+/assets/ackermann/ackermann_dimensions.json
+/assets/crcc_logo.png
+/assets/*qr.png
+/assets/minimap/
+/reference_geo/
+/config/epoch30_georeference.json
+/config/epoch30_viewer_mesh_registration_v5571.json
+/tests/private/

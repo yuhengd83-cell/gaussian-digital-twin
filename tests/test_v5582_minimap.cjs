@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),vm=require('node:vm');
+const root=path.resolve(__dirname,'..');
+const s=fs.readFileSync(path.join(root,'agv-test.html'),'utf8');
+const code=s.match(/<script id="agv-minimap-drag-v5582">([\s\S]*?)<\/script>/);
+assert(code);new vm.Script(code[1]);
+assert(s.includes("const KEY='agv-minimap-screen-position-v5582'"));
+for(const word of ['pointerdown','pointermove','pointerup','pointercancel','setPointerCapture','contextmenu','getBoundingClientRect','touch-action:none','stopImmediatePropagation','localStorage.removeItem(KEY)'])assert(s.includes(word),word);
+assert(s.includes("dock.addEventListener('click',show)"),'original open map click preserved');
+assert(s.includes("$('agvMapOpenToolbar').addEventListener('click',show)"),'toolbar map opening preserved');
+assert(s.includes("dock.dataset.dragging='true'"));
+console.log('V5582_MINIMAP_PASS: pointer drag, persistent position, click-open suppression, reset and existing map editor');

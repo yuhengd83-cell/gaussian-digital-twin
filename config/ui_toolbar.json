@@ -1,0 +1,28 @@
+{
+  "schema": "agv-toolbar-v1",
+  "uiVersion": "5.5.8.4",
+  "groupLabels": {
+    "navigation": "场景导航",
+    "view": "视图工具",
+    "vehicle": "模型与仿真",
+    "application": "地图与应用"
+  },
+  "buttonLabels": {
+    "ros2Btn": "ROS2 接收"
+  },
+  "accent": "#4b97f3",
+  "notes": "Compact single-row group headers to right of CRCC logo. One dropdown open at a time; unchanged 13 original action buttons. Floating minimap position is draggable, viewport-clamped and saved per browser. v5.5.8.4 adds a read-only ROS2 receiver button in vehicle group.",
+  "defaultExpanded": {
+    "navigation": false,
+    "view": false,
+    "vehicle": false,
+    "application": false
+  },
+  "compactStartCollapsed": true,
+  "rememberState": true,
+  "toggleSymbols": {
+    "expanded": "▾",
+    "collapsed": "▸"
+  },
+  "dropdownMode": "single-open"
+}

@@ -1,0 +1,27 @@
+{
+  "version": 3,
+  "modelId": "scene:epoch30_20261015",
+  "homeView": {
+    "p": [
+      -2.021700763320486,
+      -9.225866860238206,
+      -1.2038129232166523
+    ],
+    "t": [
+      1.4845370673520266,
+      -14.244126884541139,
+      -0.2920707611076601
+    ]
+  },
+  "sceneUp": [
+    0,
+    0,
+    -1
+  ],
+  "upAxis": "-Z",
+  "firstPersonPitchLimitDeg": 45,
+  "orbitPitchLimitDeg": 55,
+  "rollLocked": true,
+  "projectTitle": "AGV Metric Gaussian Digital Twin",
+  "projectSubtitle": "真实场景三维重建与数字孪生展示"
+}
